@@ -1,0 +1,39 @@
+/* ------------------------------------------------------------------ *
+ * local_quizmetamonitor — plugin styles                              *
+ * ------------------------------------------------------------------ */
+
+.quizmetamonitor-table {
+    width: 100%;
+}
+
+.quizmetamonitor-table th {
+    white-space: nowrap;
+}
+
+.qmm-badge-danger {
+    background-color: #c62828;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+.qmm-badge-ok {
+    background-color: #2e7d32;
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+
+/* Detail page summary card */
+.card {
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+}
+
+.card-body dl.row dt {
+    font-weight: 600;
+}
