@@ -134,4 +134,38 @@ class observer {
 
         return 0;
     }
+    /**
+     * When a new course is created, assign the exam monitor role
+     * to any monitors who are assigned to that course's category.
+     */
+    public static function course_created(\core\event\course_created $event): void {
+        global $DB;
+
+        $courseid   = (int) $event->objectid;
+        $course     = $DB->get_record('course', ['id' => $courseid]);
+
+        if (!$course) {
+            return;
+        }
+
+        $categoryid = (int) $course->category;
+
+        // Find all monitors assigned to this category.
+        $monitorids = \local_quizmetamonitor\category_util::get_monitors_for_category($categoryid);
+
+        if (empty($monitorids)) {
+            return;
+        }
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'quizmeta_exammonitor']);
+        if (!$roleid) {
+            return;
+        }
+
+        $coursecontext = \context_course::instance($courseid);
+
+        foreach ($monitorids as $userid) {
+            role_assign($roleid, $userid, $coursecontext->id);
+        }
+    }
 }
