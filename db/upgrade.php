@@ -33,6 +33,11 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
 
         upgrade_plugin_savepoint(true, 2024010103, 'local', 'quizmetamonitor');
     }
+    if ($oldversion < 2024010104) {
+        // No DB changes — just re-registers events and forces
+        // role capability refresh.
+        upgrade_plugin_savepoint(true, 2024010104, 'local', 'quizmetamonitor');
+    }
 
     return true;
 }

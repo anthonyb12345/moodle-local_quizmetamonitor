@@ -20,4 +20,11 @@ $observers = [
         'priority'  => 0,
         'internal'  => false,
     ],
+    // New: when a course is created, assign monitors who cover its category.
+    [
+        'eventname' => '\core\event\course_created',
+        'callback'  => '\local_quizmetamonitor\event\observer::course_created',
+        'priority'  => 0,
+        'internal'  => false,
+    ],
 ];
