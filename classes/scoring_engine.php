@@ -257,11 +257,20 @@ class scoring_engine {
             }
         }
 
-        // Block concurrent connections — adjust table/field for your institution's plugin.
-        if ($DB->get_manager()->table_exists('quizaccess_concurrentlogin')) {
-            $conc = $DB->get_record('quizaccess_concurrentlogin', ['quizid' => $quiz->id]);
-            if ($conc && !empty($conc->enabled)) {
+        // Block concurrent connections — quizaccess_onesession plugin stores a
+        // per-quiz row (quizid, enabled). quizaccess_concurrentlogin kept as a legacy fallback.
+        foreach (['quizaccess_onesession', 'quizaccess_concurrentlogin'] as $table) {
+            if (!$DB->get_manager()->table_exists($table)) {
+                continue;
+            }
+            // Skip rather than throw if the table doesn't have the expected shape.
+            $columns = $DB->get_columns($table);
+            if (!isset($columns['quizid'], $columns['enabled'])) {
+                continue;
+            }
+            if ($DB->record_exists_select($table, 'quizid = :quizid AND enabled <> 0', ['quizid' => $quiz->id])) {
                 $data['blockconcurrent'] = 1;
+                break;
             }
         }
 

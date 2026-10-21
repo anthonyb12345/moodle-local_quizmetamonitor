@@ -165,5 +165,30 @@
       </INDEXES>
     </TABLE>
 
+    <TABLE NAME="local_quizmeta_config_history"
+          COMMENT="History of criteria and threshold configuration changes">
+      <FIELDS>
+        <FIELD NAME="id"          TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
+        <FIELD NAME="change_type" TYPE="char" LENGTH="20" NOTNULL="true"
+              COMMENT="criteria or threshold"/>
+        <FIELD NAME="categoryid"  TYPE="int"  LENGTH="10" NOTNULL="false"
+              COMMENT="null means site default"/>
+        <FIELD NAME="changed_by"  TYPE="int"  LENGTH="10" NOTNULL="true"/>
+        <FIELD NAME="description" TYPE="text" NOTNULL="true"
+              COMMENT="Admin written reason for the change"/>
+        <FIELD NAME="snapshot"    TYPE="text" NOTNULL="true"
+              COMMENT="JSON of the new state at time of change"/>
+        <FIELD NAME="timecreated" TYPE="int"  LENGTH="10" NOTNULL="true"/>
+      </FIELDS>
+      <KEYS>
+        <KEY NAME="primary" TYPE="primary" FIELDS="id"/>
+      </KEYS>
+      <INDEXES>
+        <INDEX NAME="change_type_idx" UNIQUE="false" FIELDS="change_type"/>
+        <INDEX NAME="categoryid_idx"  UNIQUE="false" FIELDS="categoryid"/>
+        <INDEX NAME="timecreated_idx" UNIQUE="false" FIELDS="timecreated"/>
+      </INDEXES>
+    </TABLE>
+
   </TABLES>
 </XMLDB>

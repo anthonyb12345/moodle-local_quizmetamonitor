@@ -16,15 +16,16 @@ class notification_manager {
     public static function notify_teachers_created(
         array $scoreresult,
         \stdClass $quiz,
-        \stdClass $course
+        \stdClass $course,
+        int $actorid
     ): void {
-        $userids = category_util::get_teachers_for_course((int) $course->id);
+        $userids = self::get_actor_recipients($actorid, (int) $course->id);
 
-        debugging(
-            'local_quizmetamonitor: notify_teachers_created for quiz '
-            . $quiz->id . ' found ' . count($userids) . ' teacher(s)',
-            DEBUG_DEVELOPER
-        );
+        // debugging(
+        //     'local_quizmetamonitor: notify_teachers_created for quiz '
+        //     . $quiz->id . ' found ' . count($userids) . ' teacher(s)',
+        //     DEBUG_DEVELOPER
+        // );
 
         self::send_to_users(
             self::TYPE_TEACHER_CREATED,
@@ -41,15 +42,16 @@ class notification_manager {
         array $scoreresult,
         \stdClass $quiz,
         \stdClass $course,
-        ?float $previousscore
+        ?float $previousscore,
+        int $actorid
     ): void {
-        $userids = category_util::get_teachers_for_course((int) $course->id);
+        $userids = self::get_actor_recipients($actorid, (int) $course->id);
 
-        debugging(
-            'local_quizmetamonitor: notify_teachers_score_changed for quiz '
-            . $quiz->id . ' found ' . count($userids) . ' teacher(s)',
-            DEBUG_DEVELOPER
-        );
+        // debugging(
+        //     'local_quizmetamonitor: notify_teachers_score_changed for quiz '
+        //     . $quiz->id . ' found ' . count($userids) . ' teacher(s)',
+        //     DEBUG_DEVELOPER
+        // );
 
         self::send_to_users(
             self::TYPE_TEACHER_SCORE_CHANGED,
@@ -72,14 +74,14 @@ class notification_manager {
 
         $userids = category_util::get_monitors_for_category((int) $scoreresult['categoryid']);
 
-        if (empty($userids)) {
-            debugging(
-                'local_quizmetamonitor: no exam monitors found for category '
-                . $scoreresult['categoryid'],
-                DEBUG_DEVELOPER
-            );
-            return;
-        }
+        // if (empty($userids)) {
+        //     debugging(
+        //         'local_quizmetamonitor: no exam monitors found for category '
+        //         . $scoreresult['categoryid'],
+        //         DEBUG_DEVELOPER
+        //     );
+        //     return;
+        // }
 
         // Remove monitors who already received an alert for this quiz.
         $already = $DB->get_fieldset_select(
@@ -106,6 +108,25 @@ class notification_manager {
     }
 
     // ---------------------------------------------------------------- //
+    // Recipient helpers                                                 //
+    // ---------------------------------------------------------------- //
+
+    /**
+     * Only the user who created/edited the quiz is notified, and only if
+     * they are a teacher or non-editing teacher in the course.
+     *
+     * @return int[]
+     */
+    private static function get_actor_recipients(int $actorid, int $courseid): array {
+        if ($actorid <= 0) {
+            return [];
+        }
+
+        $teachers = category_util::get_teachers_for_course($courseid);
+        return in_array($actorid, $teachers, true) ? [$actorid] : [];
+    }
+
+    // ---------------------------------------------------------------- //
     // Core dispatch                                                     //
     // ---------------------------------------------------------------- //
 
@@ -120,13 +141,13 @@ class notification_manager {
     ): void {
         global $DB;
 
-        if (empty($userids)) {
-            debugging(
-                'local_quizmetamonitor: send_to_users called with empty userids for type=' . $type,
-                DEBUG_DEVELOPER
-            );
-            return;
-        }
+        // if (empty($userids)) {
+        //     debugging(
+        //         'local_quizmetamonitor: send_to_users called with empty userids for type=' . $type,
+        //         DEBUG_DEVELOPER
+        //     );
+        //     return;
+        // }
 
         $tmpl = self::get_template($type);
 
@@ -153,30 +174,30 @@ class notification_manager {
         foreach ($userids as $userid) {
             $user = \core_user::get_user($userid);
 
-            if (!$user) {
-                debugging('local_quizmetamonitor: user ' . $userid . ' not found', DEBUG_DEVELOPER);
-                continue;
-            }
+            // if (!$user) {
+            //     debugging('local_quizmetamonitor: user ' . $userid . ' not found', DEBUG_DEVELOPER);
+            //     continue;
+            // }
 
-            if (empty($user->email) || !validate_email($user->email)) {
-                debugging('local_quizmetamonitor: user ' . $userid . ' has no valid email', DEBUG_DEVELOPER);
-                continue;
-            }
+            // if (empty($user->email) || !validate_email($user->email)) {
+            //     debugging('local_quizmetamonitor: user ' . $userid . ' has no valid email', DEBUG_DEVELOPER);
+            //     continue;
+            // }
 
-            // Check user is not deleted or suspended.
-            if ($user->deleted || $user->suspended) {
-                debugging('local_quizmetamonitor: user ' . $userid . ' is deleted or suspended', DEBUG_DEVELOPER);
-                continue;
-            }
+            // // Check user is not deleted or suspended.
+            // if ($user->deleted || $user->suspended) {
+            //     debugging('local_quizmetamonitor: user ' . $userid . ' is deleted or suspended', DEBUG_DEVELOPER);
+            //     continue;
+            // }
 
             $result = email_to_user($user, $noreply, $subject, $bodyplain, $bodyhtml);
 
-            debugging(
-                'local_quizmetamonitor: email_to_user for userid=' . $userid
-                . ' type=' . $type
-                . ' result=' . ($result ? 'OK' : 'FAILED'),
-                DEBUG_DEVELOPER
-            );
+            // debugging(
+            //     'local_quizmetamonitor: email_to_user for userid=' . $userid
+            //     . ' type=' . $type
+            //     . ' result=' . ($result ? 'OK' : 'FAILED'),
+            //     DEBUG_DEVELOPER
+            // );
 
             // Log regardless of email result so we have an audit trail.
             $log                    = new \stdClass();
@@ -202,10 +223,10 @@ class notification_manager {
         }
 
         // Emergency fallback — should not occur after install seeding.
-        debugging(
-            'local_quizmetamonitor: no template found for key=' . $key . ', using fallback',
-            DEBUG_DEVELOPER
-        );
+        // debugging(
+        //     'local_quizmetamonitor: no template found for key=' . $key . ', using fallback',
+        //     DEBUG_DEVELOPER
+        // );
 
         return (object)[
             'subject'    => '[Quiz Monitor] ' . $key . ' — {quiz_name}',
@@ -239,16 +260,22 @@ class notification_manager {
     }
 
     private static function build_breakdown_html(array $breakdown): string {
+        // Every cell gets an explicit border colour; without it, mail clients draw the
+        // border in the cell's text colour, so PASS/FAIL cells got green/red edges.
+        // The status colour therefore lives on an inner span, not the cell.
+        $cell = 'border:1px solid #333333;padding:6px';
+
         $rows = '';
         foreach ($breakdown as $item) {
             $color  = $item['met'] ? '#2e7d32' : '#c62828';
             $status = $item['met'] ? 'PASS' : 'FAIL';
             $rows  .= sprintf(
                 '<tr>
-                    <td>%s</td>
-                    <td style="color:%s;font-weight:bold">%s</td>
-                    <td>%s / %s pts</td>
+                    <td style="%1$s">%2$s</td>
+                    <td style="%1$s"><span style="color:%3$s;font-weight:bold">%4$s</span></td>
+                    <td style="%1$s">%5$s / %6$s pts</td>
                 </tr>',
+                $cell,
                 htmlspecialchars($item['label'], ENT_QUOTES),
                 $color,
                 $status,
@@ -257,11 +284,12 @@ class notification_manager {
             );
         }
 
-        return '<table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">'
+        return '<table border="1" cellpadding="6" cellspacing="0"'
+             . ' style="border-collapse:collapse;border:1px solid #333333">'
              . '<thead><tr>'
-             . '<th>Criterion</th>'
-             . '<th>Status</th>'
-             . '<th>Points</th>'
+             . '<th style="' . $cell . '">Criterion</th>'
+             . '<th style="' . $cell . '">Status</th>'
+             . '<th style="' . $cell . '">Points</th>'
              . '</tr></thead>'
              . '<tbody>' . $rows . '</tbody>'
              . '</table>';

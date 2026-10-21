@@ -34,7 +34,7 @@ class observer {
             $quiz   = $DB->get_record('quiz',  ['id' => $quizid],             '*', MUST_EXIST);
             $course = $DB->get_record('course', ['id' => $result['courseid']], '*', MUST_EXIST);
 
-            notification_manager::notify_teachers_created($result, $quiz, $course);
+            notification_manager::notify_teachers_created($result, $quiz, $course, (int) $event->userid);
 
         } catch (\Throwable $e) {
             debugging(
@@ -70,7 +70,7 @@ class observer {
                 $course = $DB->get_record('course', ['id' => $result['courseid']], '*', MUST_EXIST);
 
                 notification_manager::notify_teachers_score_changed(
-                    $result, $quiz, $course, $previous
+                    $result, $quiz, $course, $previous, (int) $event->userid
                 );
             }
 

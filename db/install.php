@@ -6,6 +6,9 @@ function xmldb_local_quizmetamonitor_install(): void {
 
     $now = time();
 
+    // Quizzes created before this point are not resynced nightly.
+    set_config('trackfrom', $now, 'local_quizmetamonitor');
+
     // ------------------------------------------------------------------ //
     // 1. Seed default threshold (70 %).                                   //
     // ------------------------------------------------------------------ //
