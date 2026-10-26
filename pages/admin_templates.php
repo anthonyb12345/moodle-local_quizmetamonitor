@@ -20,6 +20,10 @@ $templatekeys = [
         => get_string('template_teacher_scorechanged', 'local_quizmetamonitor'),
     \local_quizmetamonitor\notification_manager::TYPE_EXAMMONITOR_ALERT
         => get_string('template_exammonitor_alert',   'local_quizmetamonitor'),
+    \local_quizmetamonitor\notification_manager::TYPE_TEACHER_RESTORED
+        => get_string('template_teacher_restored',    'local_quizmetamonitor'),
+    \local_quizmetamonitor\notification_manager::TYPE_TEACHER_ALERT
+        => get_string('template_teacher_alert',       'local_quizmetamonitor'),
 ];
 
 // ---- Handle save --------------------------------------------------- //

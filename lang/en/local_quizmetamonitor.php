@@ -78,7 +78,10 @@ $string['placeholder_help']            =
     'Available placeholders: {quiz_name}, {course_name}, {category_name}, '
     . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}. '
     . 'Settings-changed email only: {score_change} (e.g. "71.43% → 85.71%" or "85.71% (unchanged)"), '
-    . '{criteria_changes} (list of the criteria that changed).';
+    . '{criteria_changes} (list of the criteria that changed). '
+    . 'The restored quiz email (one per quiz) uses the same placeholders as the quiz created email.';
+$string['template_teacher_restored'] = 'Teacher — Quizzes Restored or Imported';
+$string['template_teacher_alert']    = 'Teacher — Below Threshold Alert (quiz opens within 24 hours)';
 $string['score_unchanged']    = '{$a}% (unchanged)';
 $string['score_changed_from'] = '{$a->previous}% → {$a->current}%';
 $string['criteria_nochange']  = 'No criteria changed (the scoring configuration was updated).';

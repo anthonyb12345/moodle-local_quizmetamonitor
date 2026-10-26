@@ -45,6 +45,28 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
         local_quizmetamonitor_update_settings_changed_template();
         upgrade_plugin_savepoint(true, 2024010106, 'local', 'quizmetamonitor');
     }
+    if ($oldversion < 2024010107) {
+        // New template: email to the teacher who restored/imported quizzes.
+        require_once(__DIR__ . '/upgradelib.php');
+        local_quizmetamonitor_add_restored_template();
+        upgrade_plugin_savepoint(true, 2024010107, 'local', 'quizmetamonitor');
+    }
+    if ($oldversion < 2024010108) {
+        // No DB changes: adds the restore hook for single-quiz/section restores.
+        upgrade_plugin_savepoint(true, 2024010108, 'local', 'quizmetamonitor');
+    }
+    if ($oldversion < 2024010109) {
+        // Restored-quiz email is now one email per quiz with the criteria table.
+        require_once(__DIR__ . '/upgradelib.php');
+        local_quizmetamonitor_update_restored_template();
+        upgrade_plugin_savepoint(true, 2024010109, 'local', 'quizmetamonitor');
+    }
+    if ($oldversion < 2024010110) {
+        // New template: below-threshold alert to the users who created/edited the quiz.
+        require_once(__DIR__ . '/upgradelib.php');
+        local_quizmetamonitor_add_teacher_alert_template();
+        upgrade_plugin_savepoint(true, 2024010110, 'local', 'quizmetamonitor');
+    }
 
     return true;
 }

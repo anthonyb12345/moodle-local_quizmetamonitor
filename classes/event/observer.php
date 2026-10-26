@@ -84,6 +84,29 @@ class observer {
     }
 
     /**
+     * Fired after a backup is restored, imported or a course is copied.
+     *
+     * Restores do not fire course_module_created, so restored quizzes would otherwise stay
+     * unscored (invisible to reports and to the Exam Monitor alert). Score every quiz in the
+     * course that has no score yet and email the restoring teacher once per quiz.
+     */
+    public static function course_restored(\core\event\course_restored $event): void {
+        global $DB;
+
+        $courseid = (int) $event->objectid;
+
+        $sql = "SELECT q.id
+                  FROM {quiz} q
+             LEFT JOIN {local_quizmeta_quiz_score} qs ON qs.quizid = q.id
+                 WHERE q.course = :courseid
+                   AND qs.id IS NULL
+              ORDER BY q.id";
+        $quizids = $DB->get_fieldset_sql($sql, ['courseid' => $courseid]);
+
+        \local_quizmetamonitor\restore_monitor::process($quizids, $courseid, (int) $event->userid);
+    }
+
+    /**
      * Fired when ANY course module is deleted.
      */
     public static function module_deleted(\core\event\course_module_deleted $event): void {

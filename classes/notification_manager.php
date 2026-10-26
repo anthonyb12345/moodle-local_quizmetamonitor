@@ -8,10 +8,33 @@ class notification_manager {
     const TYPE_TEACHER_CREATED       = 'teacher_created';
     const TYPE_TEACHER_SCORE_CHANGED = 'teacher_score_changed';
     const TYPE_EXAMMONITOR_ALERT     = 'exammonitor_below_threshold';
+    const TYPE_TEACHER_RESTORED      = 'teacher_quizzes_restored';
+    const TYPE_TEACHER_ALERT         = 'teacher_below_threshold';
 
     // ---------------------------------------------------------------- //
     // Public senders                                                    //
     // ---------------------------------------------------------------- //
+
+    /**
+     * Email the teacher who restored/imported a quiz, with the same criteria table as the
+     * "quiz created" email. Called once per restored quiz.
+     */
+    public static function notify_teacher_quiz_restored(
+        array $scoreresult,
+        \stdClass $quiz,
+        \stdClass $course,
+        int $actorid
+    ): void {
+        self::send_to_users(
+            self::TYPE_TEACHER_RESTORED,
+            self::get_actor_recipients($actorid, (int) $course->id),
+            $scoreresult,
+            $quiz,
+            $course,
+            null,
+            ''
+        );
+    }
 
     public static function notify_teachers_created(
         array $scoreresult,
@@ -106,6 +129,51 @@ class notification_manager {
             $course,
             null,
             $categoryname
+        );
+    }
+
+    /**
+     * Below-threshold alert (quiz opens within 24 hours) to everyone who created, edited or
+     * restored the quiz, whatever their role. Each person is alerted once per quiz.
+     */
+    public static function notify_teachers_below_threshold(
+        array $scoreresult,
+        \stdClass $quiz,
+        \stdClass $course
+    ): void {
+        global $DB;
+
+        // Creators/editors/restorers are recorded in the score history (0 = system/backfill).
+        $sql = "SELECT DISTINCT h.changed_by_userid
+                  FROM {local_quizmeta_score_history} h
+                  JOIN {user} u ON u.id = h.changed_by_userid
+                 WHERE h.quizid = :quizid
+                   AND h.changed_by_userid > 0
+                   AND u.deleted = 0
+                   AND u.suspended = 0";
+        $userids = array_map('intval', $DB->get_fieldset_sql($sql, ['quizid' => $scoreresult['quizid']]));
+
+        // Remove users who already received this alert for this quiz.
+        $already = $DB->get_fieldset_select(
+            'local_quizmeta_notif_log',
+            'userid',
+            'quizid = :qid AND notification_type = :type',
+            ['qid' => $scoreresult['quizid'], 'type' => self::TYPE_TEACHER_ALERT]
+        );
+        $userids = array_values(array_diff($userids, array_map('intval', $already)));
+
+        if (empty($userids)) {
+            return;
+        }
+
+        self::send_to_users(
+            self::TYPE_TEACHER_ALERT,
+            $userids,
+            $scoreresult,
+            $quiz,
+            $course,
+            null,
+            ''
         );
     }
 

@@ -11,7 +11,8 @@ use local_quizmetamonitor\scoring_engine;
  *
  * Quizzes created before the plugin was installed (config 'trackfrom') are skipped,
  * unless a teacher has since created/edited them (e.g. a restored course copy keeps
- * its old timecreated but is in active use).
+ * its old timecreated but is in active use). Quizzes with no score at all are always
+ * included, as a safety net for anything the event observers missed.
  */
 class resync_quiz_scores extends \core\task\scheduled_task {
 
@@ -44,7 +45,10 @@ class resync_quiz_scores extends \core\task\scheduled_task {
                     OR EXISTS (SELECT 1
                                  FROM {local_quizmeta_score_history} h
                                 WHERE h.quizid = q.id
-                                  AND h.changed_by_userid > 0)";
+                                  AND h.changed_by_userid > 0)
+                    OR NOT EXISTS (SELECT 1
+                                     FROM {local_quizmeta_quiz_score} s
+                                    WHERE s.quizid = q.id)";
         $quizids = $DB->get_fieldset_sql($sql, ['trackfrom' => $trackfrom]);
 
         foreach ($quizids as $quizid) {

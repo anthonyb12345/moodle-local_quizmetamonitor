@@ -98,4 +98,10 @@ security score is below the required threshold.</p>
             ]);
         }
     }
+
+    // Email for quizzes restored/imported into a course.
+    local_quizmetamonitor_add_restored_template();
+
+    // Below-threshold alert to the users who created/edited the quiz.
+    local_quizmetamonitor_add_teacher_alert_template();
 }

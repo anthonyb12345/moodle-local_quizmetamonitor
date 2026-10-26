@@ -27,6 +27,143 @@ function local_quizmetamonitor_default_settings_changed_template(): array {
 }
 
 /**
+ * Default "teacher_quizzes_restored" template (since 2024010109): one email per restored quiz,
+ * with the same criteria table as the "quiz created" email.
+ *
+ * @return array ['subject' => string, 'body_html' => string, 'body_plain' => string]
+ */
+function local_quizmetamonitor_default_restored_template(): array {
+    return [
+        'subject'    => 'Restored quiz: {quiz_name}',
+        'body_html'  => '<p>Hello,</p>'
+            . "\n" . '<p>The quiz <strong>{quiz_name}</strong> has been restored or imported into the course'
+            . ' <strong>{course_name}</strong>. Restored quizzes keep the settings from the backup'
+            . ' (dates, password, Safe Exam Browser, etc.), so please review them.</p>'
+            . "\n" . '<p>Security score: <strong>{score_percent}%</strong> (threshold: {threshold_percent}%)</p>'
+            . "\n" . '<h3>Criteria breakdown:</h3>'
+            . "\n" . '{criteria_breakdown}'
+            . "\n" . '<p>Please review the quiz settings to ensure compliance.</p>',
+        'body_plain' => "Hello,\n\nThe quiz \"{quiz_name}\" has been restored or imported into the course \"{course_name}\". "
+            . "Restored quizzes keep the settings from the backup (dates, password, Safe Exam Browser, etc.), "
+            . "so please review them.\n\n"
+            . "Security score: {score_percent}% (threshold: {threshold_percent}%)\n\n"
+            . "Criteria breakdown:\n{criteria_breakdown}\n\n"
+            . "Please review the quiz settings to ensure compliance.",
+    ];
+}
+
+/**
+ * Switch the "teacher_quizzes_restored" template from the 2024010107 summary format to the
+ * per-quiz format, unless an admin has customised it. Adds it if it is missing.
+ *
+ * @return bool true if the template was added or updated
+ */
+function local_quizmetamonitor_update_restored_template(): bool {
+    global $DB;
+
+    $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
+    if (!$record) {
+        local_quizmetamonitor_add_restored_template();
+        return true;
+    }
+
+    // Summary-format default seeded by 2024010107/2024010108.
+    $original = [
+        'subject'    => 'Restored quizzes to review: {course_name}',
+        'body_html'  => '<p>Hello,</p>'
+            . "\n" . '<p>{quiz_count} quiz(zes) were restored or imported into the course <strong>{course_name}</strong>.'
+            . ' Restored quizzes keep the settings from the backup (dates, password, Safe Exam Browser, etc.),'
+            . ' so please review them.</p>'
+            . "\n" . '{quiz_list}'
+            . "\n" . '<p>Please review the quiz settings to ensure compliance.</p>',
+        'body_plain' => "Hello,\n\n{quiz_count} quiz(zes) were restored or imported into the course \"{course_name}\". "
+            . "Restored quizzes keep the settings from the backup (dates, password, Safe Exam Browser, etc.), "
+            . "so please review them.\n\n{quiz_list}\n\nPlease review the quiz settings to ensure compliance.",
+    ];
+
+    $normalise = fn(string $s): string => preg_replace('/\s+/', '', $s);
+    foreach ($original as $field => $text) {
+        if ($normalise((string) $record->$field) !== $normalise($text)) {
+            return false; // Customised by an admin; leave it alone.
+        }
+    }
+
+    foreach (local_quizmetamonitor_default_restored_template() as $field => $text) {
+        $record->$field = $text;
+    }
+    $record->timemodified = time();
+    $DB->update_record('local_quizmeta_email_tmpl', $record);
+
+    return true;
+}
+
+/**
+ * Default "teacher_below_threshold" template (since 2024010110): alert to the users who created
+ * or edited a quiz that opens within 24 hours and is below the security threshold.
+ *
+ * @return array ['subject' => string, 'body_html' => string, 'body_plain' => string]
+ */
+function local_quizmetamonitor_default_teacher_alert_template(): array {
+    return [
+        'subject'    => 'ALERT: Your quiz is below the security threshold — {quiz_name}',
+        'body_html'  => '<p>Hello,</p>'
+            . "\n" . '<p>Your quiz <strong>{quiz_name}</strong> in the course <strong>{course_name}</strong>'
+            . ' opens within 24 hours and its security score is below the required threshold.</p>'
+            . "\n" . '<p>Score: <strong>{score_percent}%</strong> | Threshold: <strong>{threshold_percent}%</strong></p>'
+            . "\n" . '<h3>Criteria breakdown:</h3>'
+            . "\n" . '{criteria_breakdown}'
+            . "\n" . '<p>Please review the quiz settings before the quiz opens.</p>',
+        'body_plain' => "Hello,\n\nYour quiz \"{quiz_name}\" in the course \"{course_name}\" opens within 24 hours "
+            . "and its security score is below the required threshold.\n\n"
+            . "Score: {score_percent}% | Threshold: {threshold_percent}%\n\n"
+            . "Criteria breakdown:\n{criteria_breakdown}\n\n"
+            . "Please review the quiz settings before the quiz opens.",
+    ];
+}
+
+/**
+ * Add the "teacher_below_threshold" template if it does not exist yet.
+ */
+function local_quizmetamonitor_add_teacher_alert_template(): void {
+    global $DB;
+
+    if ($DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => 'teacher_below_threshold'])) {
+        return;
+    }
+    $now      = time();
+    $template = local_quizmetamonitor_default_teacher_alert_template();
+    $DB->insert_record('local_quizmeta_email_tmpl', (object) [
+        'template_key' => 'teacher_below_threshold',
+        'subject'      => $template['subject'],
+        'body_html'    => $template['body_html'],
+        'body_plain'   => $template['body_plain'],
+        'timecreated'  => $now,
+        'timemodified' => $now,
+    ]);
+}
+
+/**
+ * Add the "teacher_quizzes_restored" template if it does not exist yet.
+ */
+function local_quizmetamonitor_add_restored_template(): void {
+    global $DB;
+
+    if ($DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored'])) {
+        return;
+    }
+    $now      = time();
+    $template = local_quizmetamonitor_default_restored_template();
+    $DB->insert_record('local_quizmeta_email_tmpl', (object) [
+        'template_key' => 'teacher_quizzes_restored',
+        'subject'      => $template['subject'],
+        'body_html'    => $template['body_html'],
+        'body_plain'   => $template['body_plain'],
+        'timecreated'  => $now,
+        'timemodified' => $now,
+    ]);
+}
+
+/**
  * Replace the "teacher_score_changed" template with the new default, but only if an admin
  * has not customised it (i.e. it still matches the original install text).
  *

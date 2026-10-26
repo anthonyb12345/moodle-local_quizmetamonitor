@@ -79,7 +79,10 @@ $string['placeholder_help'] =
     'Espaces réservés disponibles : {quiz_name}, {course_name}, {category_name}, '
     . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}. '
     . 'Courriel de modification uniquement : {score_change} (ex. « 71.43% → 85.71% » ou « 85.71% (unchanged) »), '
-    . '{criteria_changes} (liste des critères modifiés).';
+    . '{criteria_changes} (liste des critères modifiés). '
+    . 'Le courriel de quiz restauré (un par quiz) utilise les mêmes espaces réservés que le courriel de quiz créé.';
+$string['template_teacher_restored'] = 'Enseignant — Quiz restaurés ou importés';
+$string['template_teacher_alert']    = 'Enseignant — Alerte de seuil (le quiz ouvre dans les 24 heures)';
 // Kept in English: these fill placeholders inside the (English) email template.
 $string['score_unchanged']    = '{$a}% (unchanged)';
 $string['score_changed_from'] = '{$a->previous}% → {$a->current}%';

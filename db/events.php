@@ -20,6 +20,14 @@ $observers = [
         'priority'  => 0,
         'internal'  => false,
     ],
+    // Restore/import/course copy fires only course_restored (no course_module_created),
+    // so restored quizzes are scored here.
+    [
+        'eventname' => '\core\event\course_restored',
+        'callback'  => '\local_quizmetamonitor\event\observer::course_restored',
+        'priority'  => 0,
+        'internal'  => false,
+    ],
     // New: when a course is created, assign monitors who cover its category.
     [
         'eventname' => '\core\event\course_created',

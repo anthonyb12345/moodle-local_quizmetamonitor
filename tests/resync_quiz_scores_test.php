@@ -92,6 +92,18 @@ final class resync_quiz_scores_test extends \advanced_testcase {
         $this->assertTrue($this->resync_touched($quiz));
     }
 
+    public function test_older_quiz_without_any_score_is_resynced(): void {
+        global $DB;
+
+        // e.g. restored from an old backup and missed by the observers: old timecreated, no score.
+        $quiz = $this->create_old_untouched_quiz();
+        $DB->delete_records('local_quizmeta_quiz_score', ['quizid' => $quiz->id]);
+
+        (new resync_quiz_scores())->execute();
+
+        $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quiz->id]));
+    }
+
     public function test_trackfrom_zero_resyncs_all_quizzes(): void {
         $quiz = $this->create_old_untouched_quiz();
         set_config('trackfrom', 0, 'local_quizmetamonitor');

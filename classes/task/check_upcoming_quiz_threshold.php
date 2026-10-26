@@ -7,7 +7,7 @@ use local_quizmetamonitor\notification_manager;
 
 /**
  * Runs every 30 minutes.
- * Emails Exam Monitor(s) for any quiz that:
+ * Emails Exam Monitor(s), and the users who created/edited the quiz, for any quiz that:
  *   - starts within the next 24 hours
  *   - is currently below its applicable threshold
  *   - has not yet had an alert sent in this run window
@@ -61,6 +61,9 @@ class check_upcoming_quiz_threshold extends \core\task\scheduled_task {
                 $course,
                 $category ? $category->name : ''
             );
+
+            // Also alert whoever created/edited the quiz, so they can fix it before it opens.
+            notification_manager::notify_teachers_below_threshold($scoreresult, $quiz, $course);
         }
 
         $records->close();
