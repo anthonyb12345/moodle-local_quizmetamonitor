@@ -1,6 +1,8 @@
 <?php
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/upgradelib.php');
+
 function xmldb_local_quizmetamonitor_install(): void {
     global $DB;
 
@@ -65,13 +67,9 @@ function xmldb_local_quizmetamonitor_install(): void {
         ],
         [
             'key'   => 'teacher_score_changed',
-            'subj'  => 'Quiz security score changed: {quiz_name}',
-            'html'  => '<p>Hello,</p>
-<p>The quiz <strong>{quiz_name}</strong> in <strong>{course_name}</strong> was recently edited.</p>
-<p>Previous score: {previous_score}% &rarr; New score: <strong>{score_percent}%</strong> (threshold: {threshold_percent}%)</p>
-<h3>Criteria breakdown:</h3>
-{criteria_breakdown}',
-            'plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in \"{course_name}\" was recently edited.\n\nPrevious score: {previous_score}% -> New score: {score_percent}% (threshold: {threshold_percent}%)\n\nCriteria breakdown:\n{criteria_breakdown}",
+            'subj'  => local_quizmetamonitor_default_settings_changed_template()['subject'],
+            'html'  => local_quizmetamonitor_default_settings_changed_template()['body_html'],
+            'plain' => local_quizmetamonitor_default_settings_changed_template()['body_plain'],
         ],
         [
             'key'   => 'exammonitor_below_threshold',

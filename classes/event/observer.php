@@ -63,14 +63,14 @@ class observer {
 
         try {
             $result = scoring_engine::compute_score($quizid);
-            [$changed, $previous] = scoring_engine::save_score($result, (int) $event->userid);
+            [$changed, $previous, $previousbreakdown] = scoring_engine::save_score($result, (int) $event->userid);
 
             if ($changed) {
                 $quiz   = $DB->get_record('quiz',  ['id' => $quizid],             '*', MUST_EXIST);
                 $course = $DB->get_record('course', ['id' => $result['courseid']], '*', MUST_EXIST);
 
                 notification_manager::notify_teachers_score_changed(
-                    $result, $quiz, $course, $previous, (int) $event->userid
+                    $result, $quiz, $course, $previous, (int) $event->userid, $previousbreakdown
                 );
             }
 

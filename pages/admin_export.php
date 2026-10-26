@@ -109,6 +109,10 @@ $fromclause = "{local_quizmeta_quiz_score} qs
 function get_criterion_value(array $breakdown, string $key): string {
     foreach ($breakdown as $item) {
         if ($item['key'] === $key) {
+            // Choice-based criteria (SEB) always pass; report the option actually chosen.
+            if (isset($item['choice'])) {
+                return $item['choice'] === 'no' ? 'No' : 'Yes';
+            }
             return $item['met'] ? 'Yes' : 'No';
         }
     }

@@ -103,19 +103,33 @@ class scoring_engine {
 
             $possible = (float) $def['points'];
             $totalpoints += $possible;
-            $met = self::evaluate_criterion($key, $quiz, $accessdata);
+            $met   = self::evaluate_criterion($key, $quiz, $accessdata);
+            $label = $def['label'];
+
+            // SEB "No" is a legitimate choice (open book / software allowed), so it is never
+            // penalised: always full points, and the label shows which option was picked.
+            $choice = null;
+            if ($key === 'seb_enabled') {
+                $choice = self::seb_choice((int) $accessdata['sebmode']);
+                $label  = get_string('seb_choice_' . $choice, 'local_quizmetamonitor');
+                $met    = true;
+            }
 
             if ($met) {
                 $earnedpoints += $possible;
             }
 
-            $breakdown[] = [
+            $item = [
                 'key'             => $key,
-                'label'           => $def['label'],
+                'label'           => $label,
                 'points_possible' => $possible,
                 'points_earned'   => $met ? $possible : 0.0,
                 'met'             => $met,
             ];
+            if ($choice !== null) {
+                $item['choice'] = $choice;
+            }
+            $breakdown[] = $item;
         }
 
         $scorepercent = $totalpoints > 0
@@ -135,8 +149,53 @@ class scoring_engine {
     }
 
     /**
+     * Map quizaccess_seb's requiresafeexambrowser value to the stored choice key
+     * (settings_provider::USE_SEB_* constants; ints used so this works without the rule installed).
+     */
+    private static function seb_choice(int $mode): string {
+        switch ($mode) {
+            case 0:  return 'no';       // USE_SEB_NO.
+            case 1:  return 'manual';   // USE_SEB_CONFIG_MANUALLY.
+            case 2:  return 'template'; // USE_SEB_TEMPLATE.
+            case 3:  return 'upload';   // USE_SEB_UPLOAD_CONFIG.
+            case 4:  return 'client';   // USE_SEB_CLIENT_CONFIG.
+            default: return 'yes';      // Any other "yes" variant.
+        }
+    }
+
+    /**
+     * Label to show for a breakdown item, in the current language.
+     *
+     * Choice-based criteria (SEB) are resolved at display time from their stored
+     * choice, so each reader sees their own language; other criteria use the
+     * admin-configured label stored with the score.
+     */
+    public static function display_label(array $item): string {
+        if (isset($item['choice']) && $item['key'] === 'seb_enabled') {
+            return get_string('seb_choice_' . $item['choice'], 'local_quizmetamonitor');
+        }
+        return $item['label'];
+    }
+
+    /**
+     * What a teacher can change per criterion: whether it is met and, for choice-based
+     * criteria, which option was picked. Labels are ignored (they depend on language).
+     */
+    private static function criteria_outcomes(array $breakdown): array {
+        $outcomes = [];
+        foreach ($breakdown as $item) {
+            $outcomes[$item['key']] = [(bool) $item['met'], $item['choice'] ?? null];
+        }
+        ksort($outcomes);
+        return $outcomes;
+    }
+
+    /**
      * Persist the score to local_quizmeta_quiz_score and always append a
-     * history row.  Returns [bool $changed, ?float $previousScore].
+     * history row.  Returns [bool $changed, ?float $previousScore, array $previousBreakdown].
+     *
+     * $changed is true when the score OR any criterion outcome/choice changed
+     * (e.g. SEB Yes -> No changes no points but is still a security setting change).
      */
     public static function save_score(array $result, int $changedbyuserid): array {
         global $DB;
@@ -157,10 +216,13 @@ class scoring_engine {
 
         $changed       = false;
         $previousscore = null;
+        $previous      = [];
 
         if ($existing) {
             $previousscore = (float) $existing->score_percent;
-            $changed       = abs($previousscore - $result['score_percent']) > 0.001;
+            $previous      = json_decode($existing->criteria_snapshot, true) ?? [];
+            $changed       = abs($previousscore - $result['score_percent']) > 0.001
+                || self::criteria_outcomes($previous) !== self::criteria_outcomes($result['breakdown']);
             $record->id          = $existing->id;
             $record->timecreated = $existing->timecreated;
             $DB->update_record('local_quizmeta_quiz_score', $record);
@@ -180,7 +242,7 @@ class scoring_engine {
         $history->timecreated       = $now;
         $DB->insert_record('local_quizmeta_score_history', $history);
 
-        return [$changed, $previousscore];
+        return [$changed, $previousscore, $previous];
     }
 
     // ------------------------------------------------------------------ //
@@ -247,6 +309,7 @@ class scoring_engine {
             'subnet'         => $quiz->subnet   ?? '',
             'blockconcurrent' => 0,
             'sebenabled'     => 0,
+            'sebmode'        => 0,
         ];
 
         // Safe Exam Browser — quizaccess_seb plugin.
@@ -254,6 +317,7 @@ class scoring_engine {
             $seb = $DB->get_record('quizaccess_seb_quizsettings', ['quizid' => $quiz->id]);
             if ($seb && isset($seb->requiresafeexambrowser) && (int) $seb->requiresafeexambrowser > 0) {
                 $data['sebenabled'] = 1;
+                $data['sebmode']    = (int) $seb->requiresafeexambrowser;
             }
         }
 

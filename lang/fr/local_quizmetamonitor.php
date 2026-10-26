@@ -35,6 +35,17 @@ $string['belowthreshold'] = 'EN DESSOUS DU SEUIL';
 $string['ok']             = 'OK';
 $string['pass']           = 'RÉUSSI';
 $string['fail']           = 'ÉCHEC';
+$string['seb_choice_yes']      = 'Safe Exam Browser - Oui';
+$string['seb_choice_no']       = 'Safe Exam Browser - Non - Utilisation libre des logiciels, site web ou documents';
+$string['seb_choice_manual']   = 'Safe Exam Browser - Oui - Configurer manuellement';
+$string['seb_choice_template'] = 'Safe Exam Browser - Oui - Utiliser un modèle existant';
+$string['seb_choice_upload']   = 'Safe Exam Browser - Oui - Déposer ma propre configuration';
+$string['seb_choice_client']   = 'Safe Exam Browser - Oui - Utiliser la configuration du client SEB';
+// Kept in English: it is appended inside the (English) teacher email.
+$string['seb_no_notice']       = 'You have chosen <b>NOT to use Safe Exam Browser</b>, which is '
+    . '<b>ONLY applicable when students need unrestricted access </b>(such as the case with open-book exams). '
+    . 'Note that, open-book exams can still use SEB: printed materials are always allowed, and specific '
+    . 'websites or applications can be permitted through SEB configuration.';
 
 // Buttons / links.
 $string['viewdetails']    = 'Voir les détails';
@@ -62,11 +73,17 @@ $string['nothresholdoverride']  = 'Aucune configuration spécifique n’est déf
 
 // Email templates.
 $string['template_teacher_created']      = 'Enseignant — Quiz créé';
-$string['template_teacher_scorechanged'] = 'Enseignant — Score modifié';
+$string['template_teacher_scorechanged'] = 'Enseignant — Paramètres de sécurité modifiés';
 $string['template_exammonitor_alert']    = 'Surveillant d’examen — Alerte de seuil dépassé';
 $string['placeholder_help'] =
     'Espaces réservés disponibles : {quiz_name}, {course_name}, {category_name}, '
-    . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}';
+    . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}. '
+    . 'Courriel de modification uniquement : {score_change} (ex. « 71.43% → 85.71% » ou « 85.71% (unchanged) »), '
+    . '{criteria_changes} (liste des critères modifiés).';
+// Kept in English: these fill placeholders inside the (English) email template.
+$string['score_unchanged']    = '{$a}% (unchanged)';
+$string['score_changed_from'] = '{$a->previous}% → {$a->current}%';
+$string['criteria_nochange']  = 'No criteria changed (the scoring configuration was updated).';
 
 // Tasks.
 $string['task_check_threshold'] = 'Vérifier les quiz à venir en dessous du seuil';

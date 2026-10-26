@@ -38,6 +38,13 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
         // role capability refresh.
         upgrade_plugin_savepoint(true, 2024010104, 'local', 'quizmetamonitor');
     }
+    if ($oldversion < 2024010106) {
+        // Teacher "score changed" email now also covers settings changes with an unchanged
+        // score. Swap in the new default text unless an admin has customised it.
+        require_once(__DIR__ . '/upgradelib.php');
+        local_quizmetamonitor_update_settings_changed_template();
+        upgrade_plugin_savepoint(true, 2024010106, 'local', 'quizmetamonitor');
+    }
 
     return true;
 }

@@ -82,7 +82,7 @@ $table->attributes['class'] = 'generaltable';
 foreach ($breakdown as $item) {
     $met = (bool) $item['met'];
     $table->data[] = [
-        $item['label'],
+        \local_quizmetamonitor\scoring_engine::display_label($item),
         $item['points_possible'],
         $item['points_earned'],
         $met

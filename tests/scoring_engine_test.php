@@ -7,8 +7,10 @@ defined('MOODLE_INTERNAL') || die();
  * Tests for the block_concurrent_set criterion, backed by quizaccess_onesession
  * ("Block concurrent sessions" quiz access rule).
  *
- * Quizzes are created and edited through the normal course module APIs so the
- * access rule saves its own setting and the plugin observers score the quiz.
+ * The site's quizaccess_onesession is customised to always enforce the rule: every
+ * saved quiz gets it enabled regardless of the submitted form value. Quizzes are
+ * created and edited through the normal course module APIs so the access rule saves
+ * its own setting and the plugin observers score the quiz.
  *
  * @package    local_quizmetamonitor
  */
@@ -45,7 +47,7 @@ final class scoring_engine_test extends \advanced_testcase {
     }
 
     /**
-     * Save the quiz settings form the way mod/quiz does, toggling only "Block concurrent sessions".
+     * Save the quiz settings form the way mod/quiz does, submitting "Block concurrent sessions".
      */
     private function edit_quiz(\stdClass $quiz, bool $onesession): void {
         global $CFG;
@@ -76,7 +78,7 @@ final class scoring_engine_test extends \advanced_testcase {
         $this->fail('block_concurrent_set missing from stored breakdown');
     }
 
-    public function test_quiz_created_with_block_concurrent_scores_it(): void {
+    public function test_quiz_created_has_block_concurrent_scored(): void {
         global $DB;
 
         $quiz = $this->create_quiz(true);
@@ -85,24 +87,29 @@ final class scoring_engine_test extends \advanced_testcase {
         $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
     }
 
-    public function test_quiz_created_without_block_concurrent_does_not_score_it(): void {
+    public function test_quiz_created_with_it_off_is_still_enforced_and_scored(): void {
+        global $DB;
+
         $quiz = $this->create_quiz(false);
 
-        $this->assertFalse($this->stored_block_concurrent_met((int) $quiz->id));
+        $this->assertTrue($DB->record_exists('quizaccess_onesession', ['quizid' => $quiz->id, 'enabled' => 1]));
+        $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
     }
 
-    public function test_enabling_block_concurrent_on_edit_scores_it_and_emails_pass(): void {
-        $quiz = $this->create_quiz(false);
-        $before = scoring_engine::compute_score((int) $quiz->id)['score_percent'];
+    public function test_edit_cannot_switch_it_off(): void {
+        $quiz = $this->create_quiz(true);
 
-        $sink = $this->redirectEmails();
-        $this->edit_quiz($quiz, true);
+        $this->edit_quiz($quiz, false);
 
         $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
-        $this->assertGreaterThan($before, scoring_engine::compute_score((int) $quiz->id)['score_percent']);
+    }
+
+    public function test_creation_email_shows_block_concurrent_pass(): void {
+        $sink = $this->redirectEmails();
+        $this->create_quiz(true);
 
         $ours = array_values(array_filter($sink->get_messages(),
-            fn($m) => str_starts_with($m->subject, 'Quiz security score changed:')));
+            fn($m) => str_starts_with($m->subject, 'New quiz created:')));
         $this->assertCount(1, $ours);
         $this->assertSame($this->teacher->email, $ours[0]->to);
         $this->assertMatchesRegularExpression(
@@ -111,11 +118,16 @@ final class scoring_engine_test extends \advanced_testcase {
         );
     }
 
-    public function test_disabling_block_concurrent_on_edit_unscores_it(): void {
+    public function test_quiz_without_onesession_row_is_not_scored(): void {
+        global $DB;
+
+        // e.g. a quiz created before quizaccess_onesession was installed.
         $quiz = $this->create_quiz(true);
+        $DB->delete_records('quizaccess_onesession', ['quizid' => $quiz->id]);
 
-        $this->edit_quiz($quiz, false);
+        $result = scoring_engine::compute_score((int) $quiz->id);
+        $item   = array_values(array_filter($result['breakdown'], fn($i) => $i['key'] === 'block_concurrent_set'))[0];
 
-        $this->assertFalse($this->stored_block_concurrent_met((int) $quiz->id));
+        $this->assertFalse($item['met']);
     }
 }

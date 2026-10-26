@@ -67,7 +67,7 @@ final class notification_recipients_test extends \advanced_testcase {
     private function recipients($sink): array {
         $ours = array_filter($sink->get_messages(), fn($m) =>
             str_starts_with($m->subject, 'New quiz created:')
-            || str_starts_with($m->subject, 'Quiz security score changed:'));
+            || str_starts_with($m->subject, 'Quiz security settings updated:'));
         return array_values(array_map(fn($m) => $m->to, $ours));
     }
 

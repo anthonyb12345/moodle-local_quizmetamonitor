@@ -43,7 +43,8 @@ class notification_manager {
         \stdClass $quiz,
         \stdClass $course,
         ?float $previousscore,
-        int $actorid
+        int $actorid,
+        array $previousbreakdown = []
     ): void {
         $userids = self::get_actor_recipients($actorid, (int) $course->id);
 
@@ -60,7 +61,8 @@ class notification_manager {
             $quiz,
             $course,
             $previousscore,
-            ''
+            '',
+            $previousbreakdown
         );
     }
 
@@ -137,7 +139,8 @@ class notification_manager {
         \stdClass $quiz,
         \stdClass $course,
         ?float $previousscore,
-        string $categoryname
+        string $categoryname,
+        array $previousbreakdown = []
     ): void {
         global $DB;
 
@@ -158,21 +161,41 @@ class notification_manager {
             'score_percent'      => $scoreresult['score_percent'],
             'previous_score'     => $previousscore !== null ? (string) $previousscore : 'N/A',
             'threshold_percent'  => $scoreresult['threshold_applied'],
-            'criteria_breakdown' => self::build_breakdown_plain($scoreresult['breakdown']),
         ];
 
-        $htmltokens = $tokens;
-        $htmltokens['criteria_breakdown'] = self::build_breakdown_html($scoreresult['breakdown']);
-
-        $subject   = self::apply_placeholders($tmpl->subject,   $tokens);
-        $bodyplain = self::apply_placeholders($tmpl->body_plain, $tokens);
-        $bodyhtml  = self::apply_placeholders($tmpl->body_html,  $htmltokens);
+        $subject = self::apply_placeholders($tmpl->subject, $tokens);
 
         $noreply = \core_user::get_noreply_user();
         $now     = time();
 
         foreach ($userids as $userid) {
             $user = \core_user::get_user($userid);
+
+            // The breakdown, change list and score summary contain translatable text
+            // (e.g. SEB choice), so build them in the recipient's own language.
+            $previouslang = force_current_language($user->lang ?? '');
+            $changes      = self::get_criteria_changes($previousbreakdown, $scoreresult['breakdown']);
+            $scorechange  = self::build_score_change($previousscore, (float) $scoreresult['score_percent']);
+
+            // Teachers who chose not to use SEB get a reminder right after the criteria table.
+            $sebnotice = '';
+            if ($type !== self::TYPE_EXAMMONITOR_ALERT && self::seb_not_used($scoreresult['breakdown'])) {
+                $sebnotice = get_string('seb_no_notice', 'local_quizmetamonitor');
+            }
+
+            $bodyplain = self::apply_placeholders($tmpl->body_plain, $tokens + [
+                'criteria_breakdown' => self::build_breakdown_plain($scoreresult['breakdown'])
+                    . ($sebnotice !== '' ? "\n\n" . strip_tags($sebnotice) : ''),
+                'criteria_changes'   => self::build_changes_plain($changes),
+                'score_change'       => $scorechange,
+            ]);
+            $bodyhtml  = self::apply_placeholders($tmpl->body_html, $tokens + [
+                'criteria_breakdown' => self::build_breakdown_html($scoreresult['breakdown'])
+                    . ($sebnotice !== '' ? '<p>' . $sebnotice . '</p>' : ''),
+                'criteria_changes'   => self::build_changes_html($changes),
+                'score_change'       => htmlspecialchars($scorechange, ENT_QUOTES),
+            ]);
+            force_current_language($previouslang);
 
             // if (!$user) {
             //     debugging('local_quizmetamonitor: user ' . $userid . ' not found', DEBUG_DEVELOPER);
@@ -244,6 +267,80 @@ class notification_manager {
         return $text;
     }
 
+    /**
+     * One line per criterion whose outcome or choice changed between two breakdowns,
+     * e.g. "Password set: [PASS] → [FAIL]" or "[Safe Exam Browser - Yes, ...] → [Safe Exam Browser - No, ...]".
+     *
+     * @return string[]
+     */
+    private static function get_criteria_changes(array $previous, array $current): array {
+        $previousbykey = array_column($previous, null, 'key');
+
+        $describe = function(array $item): string {
+            $label = scoring_engine::display_label($item);
+            return isset($item['choice']) ? $label : $label . ': ' . ($item['met'] ? 'PASS' : 'FAIL');
+        };
+
+        $lines = [];
+        foreach ($current as $item) {
+            $before = $previousbykey[$item['key']] ?? null;
+            if ($before === null
+                    || ((bool) $before['met'] === (bool) $item['met']
+                        && ($before['choice'] ?? null) === ($item['choice'] ?? null))) {
+                continue;
+            }
+
+            // Old and new values are bracketed so they stand out from the criterion name.
+            if (!isset($before['choice']) && !isset($item['choice'])) {
+                $lines[] = scoring_engine::display_label($item) . ': '
+                    . '[' . ($before['met'] ? 'PASS' : 'FAIL') . '] → [' . ($item['met'] ? 'PASS' : 'FAIL') . ']';
+            } else {
+                $lines[] = '[' . $describe($before) . '] → [' . $describe($item) . ']';
+            }
+        }
+        return $lines;
+    }
+
+    /**
+     * True if the quiz's SEB criterion records the "No" option.
+     */
+    private static function seb_not_used(array $breakdown): bool {
+        foreach ($breakdown as $item) {
+            if ($item['key'] === 'seb_enabled') {
+                return ($item['choice'] ?? null) === 'no';
+            }
+        }
+        return false;
+    }
+
+    private static function build_changes_plain(array $changes): string {
+        if (empty($changes)) {
+            return get_string('criteria_nochange', 'local_quizmetamonitor');
+        }
+        return implode("\n", array_map(fn($line) => '- ' . $line, $changes));
+    }
+
+    private static function build_changes_html(array $changes): string {
+        if (empty($changes)) {
+            return '<p>' . htmlspecialchars(get_string('criteria_nochange', 'local_quizmetamonitor'), ENT_QUOTES) . '</p>';
+        }
+        return '<ul>' . implode('', array_map(
+            fn($line) => '<li>' . htmlspecialchars($line, ENT_QUOTES) . '</li>',
+            $changes
+        )) . '</ul>';
+    }
+
+    /**
+     * "71.43% → 85.71%" when the score moved, "85.71% (unchanged)" when it did not.
+     */
+    private static function build_score_change(?float $previousscore, float $score): string {
+        if ($previousscore === null || abs($previousscore - $score) < 0.001) {
+            return get_string('score_unchanged', 'local_quizmetamonitor', (string) $score);
+        }
+        return get_string('score_changed_from', 'local_quizmetamonitor',
+            (object) ['previous' => (string) $previousscore, 'current' => (string) $score]);
+    }
+
     private static function build_breakdown_plain(array $breakdown): string {
         $lines = [];
         foreach ($breakdown as $item) {
@@ -251,7 +348,7 @@ class notification_manager {
             $lines[] = sprintf(
                 '[%s] %s — %s / %s pts',
                 $status,
-                $item['label'],
+                scoring_engine::display_label($item),
                 $item['points_earned'],
                 $item['points_possible']
             );
@@ -276,7 +373,7 @@ class notification_manager {
                     <td style="%1$s">%5$s / %6$s pts</td>
                 </tr>',
                 $cell,
-                htmlspecialchars($item['label'], ENT_QUOTES),
+                htmlspecialchars(scoring_engine::display_label($item), ENT_QUOTES),
                 $color,
                 $status,
                 $item['points_earned'],

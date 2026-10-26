@@ -35,6 +35,16 @@ $string['belowthreshold'] = 'BELOW THRESHOLD';
 $string['ok']             = 'OK';
 $string['pass']           = 'PASS';
 $string['fail']           = 'FAIL';
+$string['seb_choice_yes']      = 'Safe Exam Browser - Yes'; // Scores stored before the per-option labels.
+$string['seb_choice_no']       = 'Safe Exam Browser - No - Unrestricted use of software, websites, or documents';
+$string['seb_choice_manual']   = 'Safe Exam Browser - Yes - Configure manually';
+$string['seb_choice_template'] = 'Safe Exam Browser - Yes - Use an existing template';
+$string['seb_choice_upload']   = 'Safe Exam Browser - Yes - Upload my own config';
+$string['seb_choice_client']   = 'Safe Exam Browser - Yes - Use SEB client config';
+$string['seb_no_notice']       = 'You have chosen <b>NOT to use Safe Exam Browser</b>, which is '
+    . '<b>ONLY applicable when students need unrestricted access </b>(such as the case with open-book exams). '
+    . 'Note that, open-book exams can still use SEB: printed materials are always allowed, and specific '
+    . 'websites or applications can be permitted through SEB configuration.';
 
 // Buttons / links.
 $string['viewdetails']    = 'View Details';
@@ -62,11 +72,16 @@ $string['nothresholdoverride'] = 'No override set for this category. Site defaul
 
 // Email templates.
 $string['template_teacher_created']    = 'Teacher — Quiz Created';
-$string['template_teacher_scorechanged'] = 'Teacher — Score Changed';
+$string['template_teacher_scorechanged'] = 'Teacher — Security Settings Changed';
 $string['template_exammonitor_alert']  = 'Exam Monitor — Below Threshold Alert';
 $string['placeholder_help']            =
     'Available placeholders: {quiz_name}, {course_name}, {category_name}, '
-    . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}';
+    . '{score_percent}, {previous_score}, {threshold_percent}, {criteria_breakdown}. '
+    . 'Settings-changed email only: {score_change} (e.g. "71.43% → 85.71%" or "85.71% (unchanged)"), '
+    . '{criteria_changes} (list of the criteria that changed).';
+$string['score_unchanged']    = '{$a}% (unchanged)';
+$string['score_changed_from'] = '{$a->previous}% → {$a->current}%';
+$string['criteria_nochange']  = 'No criteria changed (the scoring configuration was updated).';
 
 // Tasks.
 $string['task_check_threshold'] = 'Check upcoming quizzes below threshold';
