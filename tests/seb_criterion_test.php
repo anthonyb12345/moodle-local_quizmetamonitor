@@ -43,6 +43,9 @@ final class seb_criterion_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');
@@ -321,7 +324,7 @@ final class seb_criterion_test extends \advanced_testcase {
         $quiz    = $this->create_quiz(settings_provider::USE_SEB_NO);
         $result  = scoring_engine::compute_score((int) $quiz->id);
         $monitor = $this->getDataGenerator()->create_user();
-        $DB->insert_record('local_quizmeta_exammonitor', [
+        $DB->insert_record('local_quizmetamonitor_exammonitor', [
             'userid' => $monitor->id, 'categoryid' => $result['categoryid'],
             'assignedby' => get_admin()->id, 'timecreated' => time(),
         ]);

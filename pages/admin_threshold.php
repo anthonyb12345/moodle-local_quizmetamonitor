@@ -58,14 +58,14 @@ if (data_submitted() && confirm_sesskey()) {
         $threshold = max(0, min(100, $threshold));
 
         $now      = time();
-        $existing = $DB->get_record('local_quizmeta_threshold', ['categoryid' => $dbcategoryid]);
+        $existing = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => $dbcategoryid]);
 
         if ($existing) {
             $existing->threshold_percent = $threshold;
             $existing->timemodified      = $now;
-            $DB->update_record('local_quizmeta_threshold', $existing);
+            $DB->update_record('local_quizmetamonitor_threshold', $existing);
         } else {
-            $DB->insert_record('local_quizmeta_threshold', (object)[
+            $DB->insert_record('local_quizmetamonitor_threshold', (object)[
                 'categoryid'        => $dbcategoryid,
                 'threshold_percent' => $threshold,
                 'timecreated'       => $now,
@@ -92,13 +92,13 @@ if (data_submitted() && confirm_sesskey()) {
 }
 
 // Load current value.
-$existing = $DB->get_record('local_quizmeta_threshold', ['categoryid' => $dbcategoryid]);
+$existing = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => $dbcategoryid]);
 $current  = $existing ? (float) $existing->threshold_percent : 70.0;
 
 // If category has no override, show what fallback applies.
 $fallbackmsg = '';
 if (!$isdefault && !$existing) {
-    $fallback    = $DB->get_record('local_quizmeta_threshold', ['categoryid' => null]);
+    $fallback    = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => null]);
     $fallbackmsg = get_string(
         'nothresholdoverride',
         'local_quizmetamonitor',

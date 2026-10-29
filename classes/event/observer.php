@@ -126,7 +126,7 @@ class observer {
 
         $sql = "SELECT q.id
                   FROM {quiz} q
-             LEFT JOIN {local_quizmeta_quiz_score} qs ON qs.quizid = q.id
+             LEFT JOIN {local_quizmetamonitor_quiz_score} qs ON qs.quizid = q.id
                  WHERE q.course = :courseid
                    AND qs.id IS NULL
               ORDER BY q.id";
@@ -152,9 +152,9 @@ class observer {
             return;
         }
 
-        $DB->delete_records('local_quizmeta_quiz_score', ['quizid' => $quizid]);
-        $DB->delete_records('local_quizmeta_score_history', ['quizid' => $quizid]);
-        $DB->delete_records('local_quizmeta_notif_log', ['quizid' => $quizid]);
+        $DB->delete_records('local_quizmetamonitor_quiz_score', ['quizid' => $quizid]);
+        $DB->delete_records('local_quizmetamonitor_score_history', ['quizid' => $quizid]);
+        $DB->delete_records('local_quizmetamonitor_notif_log', ['quizid' => $quizid]);
     }
 
     // Private helpers.

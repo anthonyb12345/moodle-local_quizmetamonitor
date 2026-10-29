@@ -38,8 +38,8 @@ function xmldb_local_quizmetamonitor_install(): void {
     set_config('trackfrom', $now, 'local_quizmetamonitor');
 
     // 1. Seed default threshold (70 %).
-    if (!$DB->record_exists('local_quizmeta_threshold', ['categoryid' => null])) {
-        $DB->insert_record('local_quizmeta_threshold', (object)[
+    if (!$DB->record_exists('local_quizmetamonitor_threshold', ['categoryid' => null])) {
+        $DB->insert_record('local_quizmetamonitor_threshold', (object)[
             'categoryid'        => null,
             'threshold_percent' => 70.00,
             'timecreated'       => $now,
@@ -59,8 +59,8 @@ function xmldb_local_quizmetamonitor_install(): void {
     ];
 
     foreach ($criteria as $i => [$key, $label, $points]) {
-        if (!$DB->record_exists('local_quizmeta_crit_default', ['criterion_key' => $key])) {
-            $DB->insert_record('local_quizmeta_crit_default', (object)[
+        if (!$DB->record_exists('local_quizmetamonitor_crit_default', ['criterion_key' => $key])) {
+            $DB->insert_record('local_quizmetamonitor_crit_default', (object)[
                 'criterion_key'   => $key,
                 'criterion_label' => $label,
                 'points'          => $points,
@@ -114,8 +114,8 @@ security score is below the required threshold.</p>
     ];
 
     foreach ($templates as $t) {
-        if (!$DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => $t['key']])) {
-            $DB->insert_record('local_quizmeta_email_tmpl', (object)[
+        if (!$DB->record_exists('local_quizmetamonitor_email_tmpl', ['template_key' => $t['key']])) {
+            $DB->insert_record('local_quizmetamonitor_email_tmpl', (object)[
                 'template_key' => $t['key'],
                 'subject'      => $t['subj'],
                 'body_html'    => $t['html'],

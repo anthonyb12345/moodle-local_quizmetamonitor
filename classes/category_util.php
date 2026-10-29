@@ -44,7 +44,7 @@ class category_util {
     public static function get_categories_for_monitor(int $userid): array {
         global $DB;
         $rows = $DB->get_fieldset_select(
-            'local_quizmeta_exammonitor',
+            'local_quizmetamonitor_exammonitor',
             'categoryid',
             'userid = :userid',
             ['userid' => $userid]
@@ -62,7 +62,7 @@ class category_util {
     public static function is_monitor_for_category(int $userid, int $categoryid): bool {
         global $DB;
         return $DB->record_exists(
-            'local_quizmeta_exammonitor',
+            'local_quizmetamonitor_exammonitor',
             ['userid' => $userid, 'categoryid' => $categoryid]
         );
     }
@@ -76,7 +76,7 @@ class category_util {
     public static function get_monitors_for_category(int $categoryid): array {
         global $DB;
         $rows = $DB->get_fieldset_select(
-            'local_quizmeta_exammonitor',
+            'local_quizmetamonitor_exammonitor',
             'userid',
             'categoryid = :categoryid',
             ['categoryid' => $categoryid]

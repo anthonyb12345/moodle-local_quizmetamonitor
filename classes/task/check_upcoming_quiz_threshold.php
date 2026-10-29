@@ -54,7 +54,7 @@ class check_upcoming_quiz_threshold extends \core\task\scheduled_task {
                        qs.score_percent,
                        qs.threshold_applied,
                        qs.criteria_snapshot
-                  FROM {local_quizmeta_quiz_score} qs
+                  FROM {local_quizmetamonitor_quiz_score} qs
                   JOIN {quiz} q ON q.id = qs.quizid
                  WHERE qs.is_below_threshold = 1
                    AND q.timeopen > :now

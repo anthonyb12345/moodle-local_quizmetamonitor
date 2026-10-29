@@ -47,6 +47,9 @@ final class notification_recipients_test extends \advanced_testcase {
     protected function setUp(): void {
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         $gen = $this->getDataGenerator();
         $this->course     = $gen->create_course();
@@ -169,7 +172,7 @@ final class notification_recipients_test extends \advanced_testcase {
     private function get_logged_userids(int $quizid, string $type): array {
         global $DB;
         return $DB->get_fieldset_select(
-            'local_quizmeta_notif_log',
+            'local_quizmetamonitor_notif_log',
             'userid',
             'quizid = :qid AND notification_type = :type',
             ['qid' => $quizid, 'type' => $type]

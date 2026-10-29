@@ -32,10 +32,10 @@ use core_privacy\local\request\writer;
  * Privacy API implementation for local_quizmetamonitor.
  *
  * Personal data is stored in four tables:
- *  - local_quizmeta_score_history: who created, edited or restored a quiz (quiz context);
- *  - local_quizmeta_notif_log: which notifications were sent to whom (quiz context);
- *  - local_quizmeta_exammonitor: Exam Monitor assignments and who made them (category context);
- *  - local_quizmeta_config_history: who changed the criteria/threshold (category or system context).
+ *  - local_quizmetamonitor_score_history: who created, edited or restored a quiz (quiz context);
+ *  - local_quizmetamonitor_notif_log: which notifications were sent to whom (quiz context);
+ *  - local_quizmetamonitor_exammonitor: Exam Monitor assignments and who made them (category context);
+ *  - local_quizmetamonitor_config_history: who changed the criteria/threshold (category or system context).
  *
  * On deletion, notification log rows and Exam Monitor assignments are deleted; in the two history
  * tables the user ID is replaced by 0 (system) so scores and the configuration audit trail remain.
@@ -55,35 +55,35 @@ class provider implements
      * @return collection
      */
     public static function get_metadata(collection $collection): collection {
-        $collection->add_database_table('local_quizmeta_score_history', [
-            'changed_by_userid' => 'privacy:metadata:local_quizmeta_score_history:changed_by_userid',
-            'quizid' => 'privacy:metadata:local_quizmeta_score_history:quizid',
-            'score_percent' => 'privacy:metadata:local_quizmeta_score_history:score_percent',
-            'timecreated' => 'privacy:metadata:local_quizmeta_score_history:timecreated',
-        ], 'privacy:metadata:local_quizmeta_score_history');
+        $collection->add_database_table('local_quizmetamonitor_score_history', [
+            'changed_by_userid' => 'privacy:metadata:local_quizmetamonitor_score_history:changed_by_userid',
+            'quizid' => 'privacy:metadata:local_quizmetamonitor_score_history:quizid',
+            'score_percent' => 'privacy:metadata:local_quizmetamonitor_score_history:score_percent',
+            'timecreated' => 'privacy:metadata:local_quizmetamonitor_score_history:timecreated',
+        ], 'privacy:metadata:local_quizmetamonitor_score_history');
 
-        $collection->add_database_table('local_quizmeta_notif_log', [
-            'userid' => 'privacy:metadata:local_quizmeta_notif_log:userid',
-            'quizid' => 'privacy:metadata:local_quizmeta_notif_log:quizid',
-            'notification_type' => 'privacy:metadata:local_quizmeta_notif_log:notification_type',
-            'score_percent' => 'privacy:metadata:local_quizmeta_notif_log:score_percent',
-            'timesent' => 'privacy:metadata:local_quizmeta_notif_log:timesent',
-        ], 'privacy:metadata:local_quizmeta_notif_log');
+        $collection->add_database_table('local_quizmetamonitor_notif_log', [
+            'userid' => 'privacy:metadata:local_quizmetamonitor_notif_log:userid',
+            'quizid' => 'privacy:metadata:local_quizmetamonitor_notif_log:quizid',
+            'notification_type' => 'privacy:metadata:local_quizmetamonitor_notif_log:notification_type',
+            'score_percent' => 'privacy:metadata:local_quizmetamonitor_notif_log:score_percent',
+            'timesent' => 'privacy:metadata:local_quizmetamonitor_notif_log:timesent',
+        ], 'privacy:metadata:local_quizmetamonitor_notif_log');
 
-        $collection->add_database_table('local_quizmeta_exammonitor', [
-            'userid' => 'privacy:metadata:local_quizmeta_exammonitor:userid',
-            'categoryid' => 'privacy:metadata:local_quizmeta_exammonitor:categoryid',
-            'assignedby' => 'privacy:metadata:local_quizmeta_exammonitor:assignedby',
-            'timecreated' => 'privacy:metadata:local_quizmeta_exammonitor:timecreated',
-        ], 'privacy:metadata:local_quizmeta_exammonitor');
+        $collection->add_database_table('local_quizmetamonitor_exammonitor', [
+            'userid' => 'privacy:metadata:local_quizmetamonitor_exammonitor:userid',
+            'categoryid' => 'privacy:metadata:local_quizmetamonitor_exammonitor:categoryid',
+            'assignedby' => 'privacy:metadata:local_quizmetamonitor_exammonitor:assignedby',
+            'timecreated' => 'privacy:metadata:local_quizmetamonitor_exammonitor:timecreated',
+        ], 'privacy:metadata:local_quizmetamonitor_exammonitor');
 
-        $collection->add_database_table('local_quizmeta_config_history', [
-            'changed_by' => 'privacy:metadata:local_quizmeta_config_history:changed_by',
-            'change_type' => 'privacy:metadata:local_quizmeta_config_history:change_type',
-            'categoryid' => 'privacy:metadata:local_quizmeta_config_history:categoryid',
-            'description' => 'privacy:metadata:local_quizmeta_config_history:description',
-            'timecreated' => 'privacy:metadata:local_quizmeta_config_history:timecreated',
-        ], 'privacy:metadata:local_quizmeta_config_history');
+        $collection->add_database_table('local_quizmetamonitor_config_history', [
+            'changed_by' => 'privacy:metadata:local_quizmetamonitor_config_history:changed_by',
+            'change_type' => 'privacy:metadata:local_quizmetamonitor_config_history:change_type',
+            'categoryid' => 'privacy:metadata:local_quizmetamonitor_config_history:categoryid',
+            'description' => 'privacy:metadata:local_quizmetamonitor_config_history:description',
+            'timecreated' => 'privacy:metadata:local_quizmetamonitor_config_history:timecreated',
+        ], 'privacy:metadata:local_quizmetamonitor_config_history');
 
         return $collection;
     }
@@ -111,24 +111,24 @@ class provider implements
 
         $join = self::quiz_context_join('h.quizid');
         $contextlist->add_from_sql(
-            "SELECT ctx.id FROM {local_quizmeta_score_history} h $join WHERE h.changed_by_userid = :userid",
+            "SELECT ctx.id FROM {local_quizmetamonitor_score_history} h $join WHERE h.changed_by_userid = :userid",
             ['modulelevel' => CONTEXT_MODULE, 'userid' => $userid]
         );
         $join = self::quiz_context_join('n.quizid');
         $contextlist->add_from_sql(
-            "SELECT ctx.id FROM {local_quizmeta_notif_log} n $join WHERE n.userid = :userid",
+            "SELECT ctx.id FROM {local_quizmetamonitor_notif_log} n $join WHERE n.userid = :userid",
             ['modulelevel' => CONTEXT_MODULE, 'userid' => $userid]
         );
         $contextlist->add_from_sql(
             "SELECT ctx.id
-               FROM {local_quizmeta_exammonitor} em
+               FROM {local_quizmetamonitor_exammonitor} em
                JOIN {context} ctx ON ctx.instanceid = em.categoryid AND ctx.contextlevel = :catlevel
               WHERE em.userid = :userid1 OR em.assignedby = :userid2",
             ['catlevel' => CONTEXT_COURSECAT, 'userid1' => $userid, 'userid2' => $userid]
         );
         $contextlist->add_from_sql(
             "SELECT ctx.id
-               FROM {local_quizmeta_config_history} ch
+               FROM {local_quizmetamonitor_config_history} ch
                JOIN {context} ctx ON ctx.instanceid = ch.categoryid AND ctx.contextlevel = :catlevel
               WHERE ch.changed_by = :userid",
             ['catlevel' => CONTEXT_COURSECAT, 'userid' => $userid]
@@ -137,7 +137,7 @@ class provider implements
         global $DB;
         if (
             $DB->record_exists_select(
-                'local_quizmeta_config_history',
+                'local_quizmetamonitor_config_history',
                 'changed_by = :userid AND categoryid IS NULL',
                 ['userid' => $userid]
             )
@@ -163,35 +163,37 @@ class provider implements
             }
             $userlist->add_from_sql(
                 'changed_by_userid',
-                "SELECT changed_by_userid FROM {local_quizmeta_score_history} WHERE quizid = :quizid AND changed_by_userid > 0",
+                "SELECT changed_by_userid
+                   FROM {local_quizmetamonitor_score_history}
+                  WHERE quizid = :quizid AND changed_by_userid > 0",
                 ['quizid' => $quizid]
             );
             $userlist->add_from_sql(
                 'userid',
-                "SELECT userid FROM {local_quizmeta_notif_log} WHERE quizid = :quizid",
+                "SELECT userid FROM {local_quizmetamonitor_notif_log} WHERE quizid = :quizid",
                 ['quizid' => $quizid]
             );
         } else if ($context instanceof context_coursecat) {
             $params = ['categoryid' => $context->instanceid];
             $userlist->add_from_sql(
                 'userid',
-                "SELECT userid FROM {local_quizmeta_exammonitor} WHERE categoryid = :categoryid",
+                "SELECT userid FROM {local_quizmetamonitor_exammonitor} WHERE categoryid = :categoryid",
                 $params
             );
             $userlist->add_from_sql(
                 'assignedby',
-                "SELECT assignedby FROM {local_quizmeta_exammonitor} WHERE categoryid = :categoryid AND assignedby > 0",
+                "SELECT assignedby FROM {local_quizmetamonitor_exammonitor} WHERE categoryid = :categoryid AND assignedby > 0",
                 $params
             );
             $userlist->add_from_sql(
                 'changed_by',
-                "SELECT changed_by FROM {local_quizmeta_config_history} WHERE categoryid = :categoryid AND changed_by > 0",
+                "SELECT changed_by FROM {local_quizmetamonitor_config_history} WHERE categoryid = :categoryid AND changed_by > 0",
                 $params
             );
         } else if ($context instanceof context_system) {
             $userlist->add_from_sql(
                 'changed_by',
-                "SELECT changed_by FROM {local_quizmeta_config_history} WHERE categoryid IS NULL AND changed_by > 0",
+                "SELECT changed_by FROM {local_quizmetamonitor_config_history} WHERE categoryid IS NULL AND changed_by > 0",
                 []
             );
         }
@@ -215,7 +217,7 @@ class provider implements
                     continue;
                 }
                 $history = $DB->get_records(
-                    'local_quizmeta_score_history',
+                    'local_quizmetamonitor_score_history',
                     ['quizid' => $quizid, 'changed_by_userid' => $userid],
                     'timecreated ASC',
                     'id, score_percent, timecreated'
@@ -229,7 +231,7 @@ class provider implements
                     ]);
                 }
                 $notifications = $DB->get_records(
-                    'local_quizmeta_notif_log',
+                    'local_quizmetamonitor_notif_log',
                     ['quizid' => $quizid, 'userid' => $userid],
                     'timesent ASC',
                     'id, notification_type, score_percent, timesent'
@@ -245,7 +247,7 @@ class provider implements
                 }
             } else if ($context instanceof context_coursecat) {
                 $assignments = $DB->get_records_select(
-                    'local_quizmeta_exammonitor',
+                    'local_quizmetamonitor_exammonitor',
                     'categoryid = :categoryid AND (userid = :userid1 OR assignedby = :userid2)',
                     ['categoryid' => $context->instanceid, 'userid1' => $userid, 'userid2' => $userid],
                     'timecreated ASC'
@@ -279,7 +281,7 @@ class provider implements
         $select = 'changed_by = :userid AND ' . ($categoryid === null ? 'categoryid IS NULL' : 'categoryid = :categoryid');
         $params = ['userid' => $userid] + ($categoryid === null ? [] : ['categoryid' => $categoryid]);
         $changes = $DB->get_records_select(
-            'local_quizmeta_config_history',
+            'local_quizmetamonitor_config_history',
             $select,
             $params,
             'timecreated ASC',
@@ -354,10 +356,14 @@ class provider implements
                 return;
             }
             [$sql, $params] = $userfilter('userid');
-            $DB->delete_records_select('local_quizmeta_notif_log', 'quizid = :quizid' . $sql, ['quizid' => $quizid] + $params);
+            $DB->delete_records_select(
+                'local_quizmetamonitor_notif_log',
+                'quizid = :quizid' . $sql,
+                ['quizid' => $quizid] + $params
+            );
             [$sql, $params] = $userfilter('changed_by_userid');
             $DB->set_field_select(
-                'local_quizmeta_score_history',
+                'local_quizmetamonitor_score_history',
                 'changed_by_userid',
                 0,
                 'quizid = :quizid' . $sql,
@@ -366,10 +372,10 @@ class provider implements
         } else if ($context instanceof context_coursecat) {
             $category = ['categoryid' => $context->instanceid];
             [$sql, $params] = $userfilter('userid');
-            $DB->delete_records_select('local_quizmeta_exammonitor', 'categoryid = :categoryid' . $sql, $category + $params);
+            $DB->delete_records_select('local_quizmetamonitor_exammonitor', 'categoryid = :categoryid' . $sql, $category + $params);
             [$sql, $params] = $userfilter('assignedby');
             $DB->set_field_select(
-                'local_quizmeta_exammonitor',
+                'local_quizmetamonitor_exammonitor',
                 'assignedby',
                 0,
                 'categoryid = :categoryid' . $sql,
@@ -377,7 +383,7 @@ class provider implements
             );
             [$sql, $params] = $userfilter('changed_by');
             $DB->set_field_select(
-                'local_quizmeta_config_history',
+                'local_quizmetamonitor_config_history',
                 'changed_by',
                 0,
                 'categoryid = :categoryid' . $sql,
@@ -385,7 +391,7 @@ class provider implements
             );
         } else if ($context instanceof context_system) {
             [$sql, $params] = $userfilter('changed_by');
-            $DB->set_field_select('local_quizmeta_config_history', 'changed_by', 0, 'categoryid IS NULL' . $sql, $params);
+            $DB->set_field_select('local_quizmetamonitor_config_history', 'changed_by', 0, 'categoryid IS NULL' . $sql, $params);
         }
     }
 

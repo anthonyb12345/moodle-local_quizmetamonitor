@@ -45,7 +45,7 @@ if ($confirmed && confirm_sesskey()) {
     // Get all quiz ids that do NOT yet have a score record.
     $sql = "SELECT q.id
               FROM {quiz} q
-         LEFT JOIN {local_quizmeta_quiz_score} qs ON qs.quizid = q.id
+         LEFT JOIN {local_quizmetamonitor_quiz_score} qs ON qs.quizid = q.id
              WHERE qs.id IS NULL";
 
     $unscored = $DB->get_fieldset_sql($sql);
@@ -157,7 +157,7 @@ echo $OUTPUT->heading(get_string('backfill', 'local_quizmetamonitor'));
 
 // Show counts so admin knows what they are about to do.
 $totalquizzes = $DB->count_records('quiz');
-$alreadyscored = $DB->count_records('local_quizmeta_quiz_score');
+$alreadyscored = $DB->count_records('local_quizmetamonitor_quiz_score');
 $unscored      = $totalquizzes - $alreadyscored;
 
 echo html_writer::start_div('card mb-4');

@@ -52,7 +52,7 @@ class config_history {
     ): void {
         global $DB;
 
-        $DB->insert_record('local_quizmeta_config_history', (object)[
+        $DB->insert_record('local_quizmetamonitor_config_history', (object)[
             'change_type' => $type,
             'categoryid'  => $categoryid,
             'changed_by'  => $changedby,
@@ -85,7 +85,7 @@ class config_history {
             $sql = "SELECT ch.*, u.firstname, u.lastname,
                            u.firstnamephonetic, u.lastnamephonetic,
                            u.middlename, u.alternatename
-                      FROM {local_quizmeta_config_history} ch
+                      FROM {local_quizmetamonitor_config_history} ch
                       JOIN {user} u ON u.id = ch.changed_by
                      WHERE ch.change_type = :type
                        AND ch.categoryid IS NULL
@@ -95,7 +95,7 @@ class config_history {
             $sql = "SELECT ch.*, u.firstname, u.lastname,
                            u.firstnamephonetic, u.lastnamephonetic,
                            u.middlename, u.alternatename
-                      FROM {local_quizmeta_config_history} ch
+                      FROM {local_quizmetamonitor_config_history} ch
                       JOIN {user} u ON u.id = ch.changed_by
                      WHERE ch.change_type = :type
                        AND ch.categoryid  = :categoryid

@@ -57,15 +57,15 @@ if (data_submitted() && confirm_sesskey()) {
         $bodyhtml  = optional_param('bodyhtml_'  . $key, '', PARAM_RAW);
         $bodyplain = optional_param('bodyplain_' . $key, '', PARAM_TEXT);
 
-        $existing = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => $key]);
+        $existing = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => $key]);
         if ($existing) {
             $existing->subject      = $subject;
             $existing->body_html    = $bodyhtml;
             $existing->body_plain   = $bodyplain;
             $existing->timemodified = $now;
-            $DB->update_record('local_quizmeta_email_tmpl', $existing);
+            $DB->update_record('local_quizmetamonitor_email_tmpl', $existing);
         } else {
-            $DB->insert_record('local_quizmeta_email_tmpl', (object)[
+            $DB->insert_record('local_quizmetamonitor_email_tmpl', (object)[
                 'template_key' => $key,
                 'subject'      => $subject,
                 'body_html'    => $bodyhtml,
@@ -96,7 +96,7 @@ echo html_writer::start_tag('form', ['method' => 'post']);
 echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 
 foreach ($templatekeys as $key => $label) {
-    $existing = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => $key]);
+    $existing = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => $key]);
 
     echo html_writer::tag('h3', $label, ['class' => 'mt-4']);
 

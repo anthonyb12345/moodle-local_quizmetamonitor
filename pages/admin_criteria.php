@@ -69,16 +69,16 @@ if (data_submitted() && confirm_sesskey()) {
 
             if ($isdefault) {
                 $existing = $DB->get_record(
-                    'local_quizmeta_crit_default',
+                    'local_quizmetamonitor_crit_default',
                     ['criterion_key' => $key]
                 );
                 if ($existing) {
                     $existing->points       = $points;
                     $existing->enabled      = $enabled;
                     $existing->timemodified = $now;
-                    $DB->update_record('local_quizmeta_crit_default', $existing);
+                    $DB->update_record('local_quizmetamonitor_crit_default', $existing);
                 } else {
-                    $DB->insert_record('local_quizmeta_crit_default', (object)[
+                    $DB->insert_record('local_quizmetamonitor_crit_default', (object)[
                         'criterion_key'   => $key,
                         'criterion_label' => $defaultlabel,
                         'points'          => $points,
@@ -89,7 +89,7 @@ if (data_submitted() && confirm_sesskey()) {
                     ]);
                 }
             } else {
-                $existing = $DB->get_record('local_quizmeta_crit_category', [
+                $existing = $DB->get_record('local_quizmetamonitor_crit_category', [
                     'categoryid'    => $categoryid,
                     'criterion_key' => $key,
                 ]);
@@ -97,9 +97,9 @@ if (data_submitted() && confirm_sesskey()) {
                     $existing->points       = $points;
                     $existing->enabled      = $enabled;
                     $existing->timemodified = $now;
-                    $DB->update_record('local_quizmeta_crit_category', $existing);
+                    $DB->update_record('local_quizmetamonitor_crit_category', $existing);
                 } else {
-                    $DB->insert_record('local_quizmeta_crit_category', (object)[
+                    $DB->insert_record('local_quizmetamonitor_crit_category', (object)[
                         'categoryid'      => $categoryid,
                         'criterion_key'   => $key,
                         'criterion_label' => $defaultlabel,
@@ -132,7 +132,7 @@ if (data_submitted() && confirm_sesskey()) {
 }
 
 // Load current values.
-$table      = $isdefault ? 'local_quizmeta_crit_default' : 'local_quizmeta_crit_category';
+$table      = $isdefault ? 'local_quizmetamonitor_crit_default' : 'local_quizmetamonitor_crit_category';
 $conditions = $isdefault ? [] : ['categoryid' => $categoryid];
 $existing   = $DB->get_records($table, $conditions, '', 'criterion_key, points, enabled');
 

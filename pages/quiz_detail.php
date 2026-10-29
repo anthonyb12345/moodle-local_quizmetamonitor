@@ -30,7 +30,7 @@ global $DB, $USER;
 
 $quizid = required_param('quizid', PARAM_INT);
 
-$scorerecord = $DB->get_record('local_quizmeta_quiz_score', ['quizid' => $quizid], '*', MUST_EXIST);
+$scorerecord = $DB->get_record('local_quizmetamonitor_quiz_score', ['quizid' => $quizid], '*', MUST_EXIST);
 $quiz        = $DB->get_record('quiz', ['id' => $quizid], '*', MUST_EXIST);
 $course      = $DB->get_record('course', ['id' => $scorerecord->courseid], '*', MUST_EXIST);
 $cm          = get_coursemodule_from_instance('quiz', $quizid, $course->id, false, MUST_EXIST);
@@ -126,7 +126,7 @@ echo html_writer::table($table);
 
 // Score history.
 $history = $DB->get_records(
-    'local_quizmeta_score_history',
+    'local_quizmetamonitor_score_history',
     ['quizid' => $quizid],
     'timecreated DESC',
     '*',

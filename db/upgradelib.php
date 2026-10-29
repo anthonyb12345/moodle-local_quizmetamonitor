@@ -78,14 +78,15 @@ function local_quizmetamonitor_default_restored_template(): array {
  * Switch the "teacher_quizzes_restored" template from the 2024010107 summary format to the
  * per-quiz format, unless an admin has customised it. Adds it if it is missing.
  *
+ * @param string $table Email template table (upgrade steps before 2026102900 pass the old table name).
  * @return bool true if the template was added or updated
  */
-function local_quizmetamonitor_update_restored_template(): bool {
+function local_quizmetamonitor_update_restored_template(string $table = 'local_quizmetamonitor_email_tmpl'): bool {
     global $DB;
 
-    $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
+    $record = $DB->get_record($table, ['template_key' => 'teacher_quizzes_restored']);
     if (!$record) {
-        local_quizmetamonitor_add_restored_template();
+        local_quizmetamonitor_add_restored_template($table);
         return true;
     }
 
@@ -114,7 +115,7 @@ function local_quizmetamonitor_update_restored_template(): bool {
         $record->$field = $text;
     }
     $record->timemodified = time();
-    $DB->update_record('local_quizmeta_email_tmpl', $record);
+    $DB->update_record($table, $record);
 
     return true;
 }
@@ -145,16 +146,18 @@ function local_quizmetamonitor_default_teacher_alert_template(): array {
 
 /**
  * Add the "teacher_below_threshold" template if it does not exist yet.
+ *
+ * @param string $table Email template table (upgrade steps before 2026102900 pass the old table name).
  */
-function local_quizmetamonitor_add_teacher_alert_template(): void {
+function local_quizmetamonitor_add_teacher_alert_template(string $table = 'local_quizmetamonitor_email_tmpl'): void {
     global $DB;
 
-    if ($DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => 'teacher_below_threshold'])) {
+    if ($DB->record_exists($table, ['template_key' => 'teacher_below_threshold'])) {
         return;
     }
     $now      = time();
     $template = local_quizmetamonitor_default_teacher_alert_template();
-    $DB->insert_record('local_quizmeta_email_tmpl', (object) [
+    $DB->insert_record($table, (object) [
         'template_key' => 'teacher_below_threshold',
         'subject'      => $template['subject'],
         'body_html'    => $template['body_html'],
@@ -166,16 +169,18 @@ function local_quizmetamonitor_add_teacher_alert_template(): void {
 
 /**
  * Add the "teacher_quizzes_restored" template if it does not exist yet.
+ *
+ * @param string $table Email template table (upgrade steps before 2026102900 pass the old table name).
  */
-function local_quizmetamonitor_add_restored_template(): void {
+function local_quizmetamonitor_add_restored_template(string $table = 'local_quizmetamonitor_email_tmpl'): void {
     global $DB;
 
-    if ($DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored'])) {
+    if ($DB->record_exists($table, ['template_key' => 'teacher_quizzes_restored'])) {
         return;
     }
     $now      = time();
     $template = local_quizmetamonitor_default_restored_template();
-    $DB->insert_record('local_quizmeta_email_tmpl', (object) [
+    $DB->insert_record($table, (object) [
         'template_key' => 'teacher_quizzes_restored',
         'subject'      => $template['subject'],
         'body_html'    => $template['body_html'],
@@ -189,9 +194,10 @@ function local_quizmetamonitor_add_restored_template(): void {
  * Replace the "teacher_score_changed" template with the new default, but only if an admin
  * has not customised it (i.e. it still matches the original install text).
  *
+ * @param string $table Email template table (upgrade steps before 2026102900 pass the old table name).
  * @return bool true if the template was updated
  */
-function local_quizmetamonitor_update_settings_changed_template(): bool {
+function local_quizmetamonitor_update_settings_changed_template(string $table = 'local_quizmetamonitor_email_tmpl'): bool {
     global $DB;
 
     // Original default seeded by install.php up to 2024010105.
@@ -207,7 +213,7 @@ function local_quizmetamonitor_update_settings_changed_template(): bool {
             . "Criteria breakdown:\n{criteria_breakdown}",
     ];
 
-    $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_score_changed']);
+    $record = $DB->get_record($table, ['template_key' => 'teacher_score_changed']);
     if (!$record) {
         return false;
     }
@@ -224,7 +230,7 @@ function local_quizmetamonitor_update_settings_changed_template(): bool {
         $record->$field = $text;
     }
     $record->timemodified = time();
-    $DB->update_record('local_quizmeta_email_tmpl', $record);
+    $DB->update_record($table, $record);
 
     return true;
 }

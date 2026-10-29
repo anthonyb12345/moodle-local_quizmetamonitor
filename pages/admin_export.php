@@ -113,7 +113,7 @@ $selectfields = "qs.quizid,
                  c.shortname           AS course_shortname,
                  cc.name               AS category_name";
 
-$fromclause = "{local_quizmeta_quiz_score} qs
+$fromclause = "{local_quizmetamonitor_quiz_score} qs
                JOIN {quiz}              q  ON q.id  = qs.quizid
                JOIN {course}            c  ON c.id  = qs.courseid
                JOIN {course_categories} cc ON cc.id = qs.categoryid";

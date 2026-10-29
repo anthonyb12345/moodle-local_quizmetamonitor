@@ -51,6 +51,9 @@ final class provider_test extends provider_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');
@@ -75,7 +78,7 @@ final class provider_test extends provider_testcase {
     private function assign_monitor(int $userid, int $assignedby): context_coursecat {
         global $DB;
 
-        $DB->insert_record('local_quizmeta_exammonitor', [
+        $DB->insert_record('local_quizmetamonitor_exammonitor', [
             'userid' => $userid, 'categoryid' => $this->course->category,
             'assignedby' => $assignedby, 'timecreated' => time(),
         ]);
@@ -90,8 +93,8 @@ final class provider_test extends provider_testcase {
         $tables = array_map(fn($item) => $item->get_name(), $items);
         sort($tables);
         $this->assertSame([
-            'local_quizmeta_config_history', 'local_quizmeta_exammonitor',
-            'local_quizmeta_notif_log', 'local_quizmeta_score_history',
+            'local_quizmetamonitor_config_history', 'local_quizmetamonitor_exammonitor',
+            'local_quizmetamonitor_notif_log', 'local_quizmetamonitor_score_history',
         ], $tables);
     }
 
@@ -139,10 +142,10 @@ final class provider_test extends provider_testcase {
             $contextlist->get_contextids()
         ));
 
-        $this->assertFalse($DB->record_exists('local_quizmeta_notif_log', ['userid' => $this->teacher->id]));
-        $this->assertFalse($DB->record_exists('local_quizmeta_score_history', ['changed_by_userid' => $this->teacher->id]));
+        $this->assertFalse($DB->record_exists('local_quizmetamonitor_notif_log', ['userid' => $this->teacher->id]));
+        $this->assertFalse($DB->record_exists('local_quizmetamonitor_score_history', ['changed_by_userid' => $this->teacher->id]));
         // The scores themselves stay.
-        $this->assertTrue($DB->record_exists('local_quizmeta_score_history', ['quizid' => $this->quiz->id]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_score_history', ['quizid' => $this->quiz->id]));
     }
 
     /**
@@ -164,11 +167,11 @@ final class provider_test extends provider_testcase {
 
         // Deleting the admin's data keeps the assignment but forgets who made it.
         provider::delete_data_for_users(new approved_userlist($catcontext, 'local_quizmetamonitor', [$admin->id]));
-        $this->assertTrue($DB->record_exists('local_quizmeta_exammonitor', ['userid' => $monitor->id, 'assignedby' => 0]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_exammonitor', ['userid' => $monitor->id, 'assignedby' => 0]));
 
         // Deleting the monitor's data removes the assignment.
         provider::delete_data_for_users(new approved_userlist($catcontext, 'local_quizmetamonitor', [$monitor->id]));
-        $this->assertFalse($DB->record_exists('local_quizmeta_exammonitor', ['userid' => $monitor->id]));
+        $this->assertFalse($DB->record_exists('local_quizmetamonitor_exammonitor', ['userid' => $monitor->id]));
     }
 
     /**
@@ -184,9 +187,9 @@ final class provider_test extends provider_testcase {
         $this->assertContains((string) context_system::instance()->id, array_map('strval', $contextids));
 
         provider::delete_data_for_all_users_in_context(context_system::instance());
-        $this->assertFalse($DB->record_exists('local_quizmeta_config_history', ['changed_by' => $admin->id]));
+        $this->assertFalse($DB->record_exists('local_quizmetamonitor_config_history', ['changed_by' => $admin->id]));
         $this->assertTrue($DB->record_exists_select(
-            'local_quizmeta_config_history',
+            'local_quizmetamonitor_config_history',
             $DB->sql_compare_text('description') . ' = ' . $DB->sql_compare_text(':description'),
             ['description' => 'Raised for exams']
         ));
@@ -199,9 +202,9 @@ final class provider_test extends provider_testcase {
         global $DB;
 
         provider::delete_data_for_all_users_in_context($this->quizcontext);
-        $this->assertFalse($DB->record_exists('local_quizmeta_notif_log', ['quizid' => $this->quiz->id]));
+        $this->assertFalse($DB->record_exists('local_quizmetamonitor_notif_log', ['quizid' => $this->quiz->id]));
         $this->assertFalse($DB->record_exists_select(
-            'local_quizmeta_score_history',
+            'local_quizmetamonitor_score_history',
             'quizid = :quizid AND changed_by_userid > 0',
             ['quizid' => $this->quiz->id]
         ));

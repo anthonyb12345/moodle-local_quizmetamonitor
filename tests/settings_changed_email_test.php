@@ -44,6 +44,9 @@ final class settings_changed_email_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');
@@ -129,7 +132,7 @@ final class settings_changed_email_test extends \advanced_testcase {
         global $DB;
 
         // Simulate a site still on the original install text (with CRLF line endings).
-        $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_score_changed'], '*', MUST_EXIST);
+        $record = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_score_changed'], '*', MUST_EXIST);
         $record->subject    = 'Quiz security score changed: {quiz_name}';
         $record->body_html  = "<p>Hello,</p>\r\n<p>The quiz <strong>{quiz_name}</strong> in <strong>{course_name}</strong>"
             . " was recently edited.</p>\r\n<p>Previous score: {previous_score}% &rarr; "
@@ -138,11 +141,11 @@ final class settings_changed_email_test extends \advanced_testcase {
         $record->body_plain = "Hello,\n\nThe quiz \"{quiz_name}\" in \"{course_name}\" was recently edited.\n\n"
             . "Previous score: {previous_score}% -> New score: {score_percent}% (threshold: {threshold_percent}%)\n\n"
             . "Criteria breakdown:\n{criteria_breakdown}";
-        $DB->update_record('local_quizmeta_email_tmpl', $record);
+        $DB->update_record('local_quizmetamonitor_email_tmpl', $record);
 
         $this->assertTrue(local_quizmetamonitor_update_settings_changed_template());
 
-        $updated = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_score_changed']);
+        $updated = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_score_changed']);
         $this->assertSame('Quiz security settings updated: {quiz_name}', $updated->subject);
         $this->assertStringContainsString('{criteria_changes}', $updated->body_html);
         $this->assertStringContainsString('{score_change}', $updated->body_plain);
@@ -155,7 +158,7 @@ final class settings_changed_email_test extends \advanced_testcase {
         global $DB;
 
         $DB->set_field(
-            'local_quizmeta_email_tmpl',
+            'local_quizmetamonitor_email_tmpl',
             'subject',
             'Our own subject: {quiz_name}',
             ['template_key' => 'teacher_score_changed']
@@ -163,7 +166,7 @@ final class settings_changed_email_test extends \advanced_testcase {
 
         $this->assertFalse(local_quizmetamonitor_update_settings_changed_template());
         $this->assertSame('Our own subject: {quiz_name}', $DB->get_field(
-            'local_quizmeta_email_tmpl',
+            'local_quizmetamonitor_email_tmpl',
             'subject',
             ['template_key' => 'teacher_score_changed']
         ));

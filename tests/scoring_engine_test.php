@@ -45,6 +45,9 @@ final class scoring_engine_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         if (!\core_component::get_component_directory('quizaccess_onesession')) {
             $this->markTestSkipped('quizaccess_onesession is not installed.');
@@ -98,7 +101,7 @@ final class scoring_engine_test extends \advanced_testcase {
     private function stored_block_concurrent_met(int $quizid): bool {
         global $DB;
 
-        $snapshot = $DB->get_field('local_quizmeta_quiz_score', 'criteria_snapshot', ['quizid' => $quizid], MUST_EXIST);
+        $snapshot = $DB->get_field('local_quizmetamonitor_quiz_score', 'criteria_snapshot', ['quizid' => $quizid], MUST_EXIST);
         foreach (json_decode($snapshot, true) as $item) {
             if ($item['key'] === 'block_concurrent_set') {
                 return (bool) $item['met'];

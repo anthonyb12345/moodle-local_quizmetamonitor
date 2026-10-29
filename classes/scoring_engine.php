@@ -57,7 +57,7 @@ class scoring_engine {
         global $DB;
 
         $catrows = $DB->get_records(
-            'local_quizmeta_crit_category',
+            'local_quizmetamonitor_crit_category',
             ['categoryid' => $categoryid],
             'sortorder ASC'
         );
@@ -66,7 +66,7 @@ class scoring_engine {
             return self::rows_to_map($catrows);
         }
 
-        $defrows = $DB->get_records('local_quizmeta_crit_default', [], 'sortorder ASC');
+        $defrows = $DB->get_records('local_quizmetamonitor_crit_default', [], 'sortorder ASC');
         return self::rows_to_map($defrows);
     }
 
@@ -80,12 +80,12 @@ class scoring_engine {
     public static function resolve_threshold(int $categoryid): float {
         global $DB;
 
-        $override = $DB->get_record('local_quizmeta_threshold', ['categoryid' => $categoryid]);
+        $override = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => $categoryid]);
         if ($override) {
             return (float) $override->threshold_percent;
         }
 
-        $default = $DB->get_record('local_quizmeta_threshold', ['categoryid' => null]);
+        $default = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => null]);
         if ($default) {
             return (float) $default->threshold_percent;
         }
@@ -229,7 +229,7 @@ class scoring_engine {
     }
 
     /**
-     * Persist the score to local_quizmeta_quiz_score and always append a
+     * Persist the score to local_quizmetamonitor_quiz_score and always append a
      * history row.  Returns [bool $changed, ?float $previousScore, array $previousBreakdown].
      *
      * $changed is true when the score OR any criterion outcome/choice changed
@@ -243,7 +243,7 @@ class scoring_engine {
         global $DB;
 
         $now      = time();
-        $existing = $DB->get_record('local_quizmeta_quiz_score', ['quizid' => $result['quizid']]);
+        $existing = $DB->get_record('local_quizmetamonitor_quiz_score', ['quizid' => $result['quizid']]);
         $snapshot = json_encode($result['breakdown']);
 
         $record                    = new \stdClass();
@@ -267,10 +267,10 @@ class scoring_engine {
                 || self::criteria_outcomes($previous) !== self::criteria_outcomes($result['breakdown']);
             $record->id          = $existing->id;
             $record->timecreated = $existing->timecreated;
-            $DB->update_record('local_quizmeta_quiz_score', $record);
+            $DB->update_record('local_quizmetamonitor_quiz_score', $record);
         } else {
             $record->timecreated = $now;
-            $DB->insert_record('local_quizmeta_quiz_score', $record);
+            $DB->insert_record('local_quizmetamonitor_quiz_score', $record);
             $changed = true; // First-time creation always counts as changed.
         }
 
@@ -282,7 +282,7 @@ class scoring_engine {
         $history->threshold_applied = $result['threshold_applied'];
         $history->changed_by_userid = $changedbyuserid;
         $history->timecreated       = $now;
-        $DB->insert_record('local_quizmeta_score_history', $history);
+        $DB->insert_record('local_quizmetamonitor_score_history', $history);
 
         return [$changed, $previousscore, $previous];
     }

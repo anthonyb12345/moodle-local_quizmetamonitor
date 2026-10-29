@@ -58,7 +58,7 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
         upgrade_plugin_savepoint(true, 2024010103, 'local', 'quizmetamonitor');
     }
     if ($oldversion < 2024010104) {
-        // No DB changes — just re-registers events and forces
+        // No DB changes â€” just re-registers events and forces
         // role capability refresh.
         upgrade_plugin_savepoint(true, 2024010104, 'local', 'quizmetamonitor');
     }
@@ -66,13 +66,13 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
         // Teacher "score changed" email now also covers settings changes with an unchanged
         // score. Swap in the new default text unless an admin has customised it.
         require_once(__DIR__ . '/upgradelib.php');
-        local_quizmetamonitor_update_settings_changed_template();
+        local_quizmetamonitor_update_settings_changed_template('local_quizmeta_email_tmpl');
         upgrade_plugin_savepoint(true, 2024010106, 'local', 'quizmetamonitor');
     }
     if ($oldversion < 2024010107) {
         // New template: email to the teacher who restored/imported quizzes.
         require_once(__DIR__ . '/upgradelib.php');
-        local_quizmetamonitor_add_restored_template();
+        local_quizmetamonitor_add_restored_template('local_quizmeta_email_tmpl');
         upgrade_plugin_savepoint(true, 2024010107, 'local', 'quizmetamonitor');
     }
     if ($oldversion < 2024010108) {
@@ -82,14 +82,29 @@ function xmldb_local_quizmetamonitor_upgrade($oldversion): bool {
     if ($oldversion < 2024010109) {
         // Restored-quiz email is now one email per quiz with the criteria table.
         require_once(__DIR__ . '/upgradelib.php');
-        local_quizmetamonitor_update_restored_template();
+        local_quizmetamonitor_update_restored_template('local_quizmeta_email_tmpl');
         upgrade_plugin_savepoint(true, 2024010109, 'local', 'quizmetamonitor');
     }
     if ($oldversion < 2024010110) {
         // New template: below-threshold alert to the users who created/edited the quiz.
         require_once(__DIR__ . '/upgradelib.php');
-        local_quizmetamonitor_add_teacher_alert_template();
+        local_quizmetamonitor_add_teacher_alert_template('local_quizmeta_email_tmpl');
         upgrade_plugin_savepoint(true, 2024010110, 'local', 'quizmetamonitor');
+    }
+    if ($oldversion < 2026102900) {
+        // Table names must start with the full plugin name: local_quizmeta_* -> local_quizmetamonitor_*.
+        // Renaming keeps all rows.
+        $tables = [
+            'crit_default', 'crit_category', 'threshold', 'quiz_score', 'score_history',
+            'exammonitor', 'notif_log', 'email_tmpl', 'config_history',
+        ];
+        foreach ($tables as $name) {
+            $table = new xmldb_table('local_quizmeta_' . $name);
+            if ($dbman->table_exists($table) && !$dbman->table_exists('local_quizmetamonitor_' . $name)) {
+                $dbman->rename_table($table, 'local_quizmetamonitor_' . $name);
+            }
+        }
+        upgrade_plugin_savepoint(true, 2026102900, 'local', 'quizmetamonitor');
     }
 
     return true;

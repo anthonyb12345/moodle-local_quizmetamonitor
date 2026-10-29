@@ -49,6 +49,9 @@ final class teacher_threshold_alert_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');

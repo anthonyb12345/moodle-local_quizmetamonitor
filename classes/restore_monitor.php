@@ -44,7 +44,7 @@ class restore_monitor {
 
         $results = [];
         foreach ($quizids as $quizid) {
-            if ($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quizid])) {
+            if ($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $quizid])) {
                 continue;
             }
             try {

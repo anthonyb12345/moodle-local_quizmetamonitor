@@ -108,7 +108,7 @@ $fields = "qs.quizid, qs.courseid, qs.categoryid,
            c.fullname AS coursename,
            cc.name AS categoryname,
            qs.score_percent, qs.threshold_applied, qs.is_below_threshold";
-$from   = "{local_quizmeta_quiz_score} qs
+$from   = "{local_quizmetamonitor_quiz_score} qs
            JOIN {quiz}              q  ON q.id  = qs.quizid
            JOIN {course}            c  ON c.id  = qs.courseid
            JOIN {course_categories} cc ON cc.id = qs.categoryid";

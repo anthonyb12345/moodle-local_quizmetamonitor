@@ -54,7 +54,7 @@ class resync_quiz_scores extends \core\task\scheduled_task {
         if ($trackfrom !== false) {
             return (int) $trackfrom;
         }
-        return (int) $DB->get_field_sql('SELECT MIN(timecreated) FROM {local_quizmeta_crit_default}');
+        return (int) $DB->get_field_sql('SELECT MIN(timecreated) FROM {local_quizmetamonitor_crit_default}');
     }
 
     /**
@@ -69,11 +69,11 @@ class resync_quiz_scores extends \core\task\scheduled_task {
                   FROM {quiz} q
                  WHERE q.timecreated >= :trackfrom
                     OR EXISTS (SELECT 1
-                                 FROM {local_quizmeta_score_history} h
+                                 FROM {local_quizmetamonitor_score_history} h
                                 WHERE h.quizid = q.id
                                   AND h.changed_by_userid > 0)
                     OR NOT EXISTS (SELECT 1
-                                     FROM {local_quizmeta_quiz_score} s
+                                     FROM {local_quizmetamonitor_quiz_score} s
                                     WHERE s.quizid = q.id)";
         $quizids = $DB->get_fieldset_sql($sql, ['trackfrom' => $trackfrom]);
 

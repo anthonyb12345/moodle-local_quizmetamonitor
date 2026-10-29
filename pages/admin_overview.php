@@ -105,8 +105,8 @@ foreach ($navlinks as [$file, $label]) {
 echo html_writer::div($navhtml, 'mb-4');
 
 // Summary counters.
-$totaltracked = $DB->count_records('local_quizmeta_quiz_score');
-$totalbelow   = $DB->count_records('local_quizmeta_quiz_score', ['is_below_threshold' => 1]);
+$totaltracked = $DB->count_records('local_quizmetamonitor_quiz_score');
+$totalbelow   = $DB->count_records('local_quizmetamonitor_quiz_score', ['is_below_threshold' => 1]);
 $totalok      = $totaltracked - $totalbelow;
 
 echo html_writer::start_div('card mb-4');
@@ -302,7 +302,7 @@ if ($filterstatus === 'below') {
 
 // Filtered counter.
 $filteredsql   = "SELECT COUNT(*)
-                    FROM {local_quizmeta_quiz_score} qs
+                    FROM {local_quizmetamonitor_quiz_score} qs
                    WHERE $where";
 $filteredcount = $DB->count_records_sql($filteredsql, $params);
 
@@ -325,7 +325,7 @@ $fields = "qs.quizid,
            qs.threshold_applied,
            qs.is_below_threshold";
 
-$from = "{local_quizmeta_quiz_score} qs
+$from = "{local_quizmetamonitor_quiz_score} qs
          JOIN {quiz}              q  ON q.id  = qs.quizid
          JOIN {course}            c  ON c.id  = qs.courseid
          JOIN {course_categories} cc ON cc.id = qs.categoryid";

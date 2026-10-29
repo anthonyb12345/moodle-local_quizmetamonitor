@@ -154,7 +154,7 @@ class notification_manager {
 
         // Remove monitors who already received an alert for this quiz.
         $already = $DB->get_fieldset_select(
-            'local_quizmeta_notif_log',
+            'local_quizmetamonitor_notif_log',
             'userid',
             'quizid = :qid AND notification_type = :type',
             ['qid' => $scoreresult['quizid'], 'type' => self::TYPE_EXAMMONITOR_ALERT]
@@ -193,7 +193,7 @@ class notification_manager {
 
         // Creators/editors/restorers are recorded in the score history (0 = system/backfill).
         $sql = "SELECT DISTINCT h.changed_by_userid
-                  FROM {local_quizmeta_score_history} h
+                  FROM {local_quizmetamonitor_score_history} h
                   JOIN {user} u ON u.id = h.changed_by_userid
                  WHERE h.quizid = :quizid
                    AND h.changed_by_userid > 0
@@ -203,7 +203,7 @@ class notification_manager {
 
         // Remove users who already received this alert for this quiz.
         $already = $DB->get_fieldset_select(
-            'local_quizmeta_notif_log',
+            'local_quizmetamonitor_notif_log',
             'userid',
             'quizid = :qid AND notification_type = :type',
             ['qid' => $scoreresult['quizid'], 'type' => self::TYPE_TEACHER_ALERT]
@@ -324,7 +324,7 @@ class notification_manager {
             $log->notification_type = $type;
             $log->score_percent     = $scoreresult['score_percent'];
             $log->timesent          = $now;
-            $DB->insert_record('local_quizmeta_notif_log', $log);
+            $DB->insert_record('local_quizmetamonitor_notif_log', $log);
         }
     }
 
@@ -339,7 +339,7 @@ class notification_manager {
     private static function get_template(string $key): \stdClass {
         global $DB;
 
-        $tmpl = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => $key]);
+        $tmpl = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => $key]);
         if ($tmpl) {
             return $tmpl;
         }

@@ -4,7 +4,7 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
   <TABLES>
-    <TABLE NAME="local_quizmeta_crit_default" COMMENT="Site-wide default scoring criteria">
+    <TABLE NAME="local_quizmetamonitor_crit_default" COMMENT="Site-wide default scoring criteria">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="criterion_key" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
@@ -22,7 +22,7 @@
         <INDEX NAME="criterion_key_idx" UNIQUE="true" FIELDS="criterion_key"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_crit_category" COMMENT="Category-specific criteria overrides">
+    <TABLE NAME="local_quizmetamonitor_crit_category" COMMENT="Category-specific criteria overrides">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -42,7 +42,7 @@
         <INDEX NAME="cat_crit_idx" UNIQUE="true" FIELDS="categoryid, criterion_key"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_threshold" COMMENT="Default and per-category alert thresholds">
+    <TABLE NAME="local_quizmetamonitor_threshold" COMMENT="Default and per-category alert thresholds">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="categoryid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false"/>
@@ -57,7 +57,7 @@
         <INDEX NAME="categoryid_idx" UNIQUE="true" FIELDS="categoryid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_quiz_score" COMMENT="Current security score snapshot per quiz">
+    <TABLE NAME="local_quizmetamonitor_quiz_score" COMMENT="Current security score snapshot per quiz">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -80,7 +80,7 @@
         <INDEX NAME="below_idx" UNIQUE="false" FIELDS="is_below_threshold"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_score_history" COMMENT="Historical score records per quiz">
+    <TABLE NAME="local_quizmetamonitor_score_history" COMMENT="Historical score records per quiz">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -97,7 +97,7 @@
         <INDEX NAME="quizid_idx" UNIQUE="false" FIELDS="quizid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_exammonitor" COMMENT="Exam Monitor to category assignments">
+    <TABLE NAME="local_quizmetamonitor_exammonitor" COMMENT="Exam Monitor to category assignments">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -114,7 +114,7 @@
         <INDEX NAME="user_cat_idx" UNIQUE="true" FIELDS="userid, categoryid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_notif_log" COMMENT="Log of all sent notifications">
+    <TABLE NAME="local_quizmetamonitor_notif_log" COMMENT="Log of all sent notifications">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="quizid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false"/>
@@ -131,7 +131,7 @@
         <INDEX NAME="timesent_idx" UNIQUE="false" FIELDS="timesent"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_email_tmpl" COMMENT="Configurable email templates">
+    <TABLE NAME="local_quizmetamonitor_email_tmpl" COMMENT="Configurable email templates">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="template_key" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false"/>
@@ -148,7 +148,7 @@
         <INDEX NAME="template_key_idx" UNIQUE="true" FIELDS="template_key"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="local_quizmeta_config_history" COMMENT="History of criteria and threshold configuration changes">
+    <TABLE NAME="local_quizmetamonitor_config_history" COMMENT="History of criteria and threshold configuration changes">
       <FIELDS>
         <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="change_type" TYPE="char" LENGTH="20" NOTNULL="true" SEQUENCE="false" COMMENT="criteria or threshold"/>

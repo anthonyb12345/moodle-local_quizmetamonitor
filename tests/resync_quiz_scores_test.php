@@ -41,6 +41,9 @@ final class resync_quiz_scores_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');
@@ -74,9 +77,9 @@ final class resync_quiz_scores_test extends \advanced_testcase {
     private function resync_touched(\stdClass $quiz): bool {
         global $DB;
 
-        $before = $DB->count_records('local_quizmeta_score_history', ['quizid' => $quiz->id]);
+        $before = $DB->count_records('local_quizmetamonitor_score_history', ['quizid' => $quiz->id]);
         (new resync_quiz_scores())->execute();
-        $after  = $DB->count_records('local_quizmeta_score_history', ['quizid' => $quiz->id]);
+        $after  = $DB->count_records('local_quizmetamonitor_score_history', ['quizid' => $quiz->id]);
 
         return $after > $before;
     }
@@ -89,7 +92,7 @@ final class resync_quiz_scores_test extends \advanced_testcase {
 
         // Existing installs have no 'trackfrom' config; the seeded criteria rows date the install.
         unset_config('trackfrom', 'local_quizmetamonitor');
-        $installed = (int) $DB->get_field_sql('SELECT MIN(timecreated) FROM {local_quizmeta_crit_default}');
+        $installed = (int) $DB->get_field_sql('SELECT MIN(timecreated) FROM {local_quizmetamonitor_crit_default}');
 
         $this->assertGreaterThan(0, $installed);
         $this->assertSame($installed, resync_quiz_scores::get_trackfrom());
@@ -136,11 +139,11 @@ final class resync_quiz_scores_test extends \advanced_testcase {
 
         // E.g. restored from an old backup and missed by the observers: old timecreated, no score.
         $quiz = $this->create_old_untouched_quiz();
-        $DB->delete_records('local_quizmeta_quiz_score', ['quizid' => $quiz->id]);
+        $DB->delete_records('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]);
 
         (new resync_quiz_scores())->execute();
 
-        $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quiz->id]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]));
     }
 
     /**

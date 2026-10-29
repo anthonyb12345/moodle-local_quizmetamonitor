@@ -48,6 +48,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         global $PAGE;
         parent::setUp();
         $this->resetAfterTest();
+        // The plugin's observers are external, so on PostgreSQL they only run once the test's
+        // transaction commits; reset the slow way so they run as on a real site.
+        $this->preventResetByRollback();
 
         // Observers email on quiz creation; output is already initialised on a real request.
         $PAGE->get_renderer('core');
@@ -165,12 +168,12 @@ final class restore_monitoring_test extends \advanced_testcase {
         $targetquizzes = $DB->get_records('quiz', ['course' => $this->target->id]);
         $this->assertCount(3, $targetquizzes);
         foreach ($targetquizzes as $quiz) {
-            $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quiz->id]), $quiz->name);
+            $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]), $quiz->name);
         }
         $restored = array_filter($targetquizzes, fn($q) => $q->id != $existing->id);
         foreach ($restored as $quiz) {
             $this->assertTrue($DB->record_exists(
-                'local_quizmeta_score_history',
+                'local_quizmetamonitor_score_history',
                 ['quizid' => $quiz->id, 'changed_by_userid' => $this->teacher->id]
             ));
         }
@@ -207,9 +210,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->backup_file_and_restore_into_target(\backup::TYPE_1ACTIVITY, (int) $quiz->cmid, (int) $this->teacher->id);
 
         $restored = $DB->get_record('quiz', ['course' => $this->target->id], '*', MUST_EXIST);
-        $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $restored->id]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $restored->id]));
         $this->assertTrue($DB->record_exists(
-            'local_quizmeta_score_history',
+            'local_quizmetamonitor_score_history',
             ['quizid' => $restored->id, 'changed_by_userid' => $this->teacher->id]
         ));
 
@@ -248,7 +251,7 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->backup_file_and_restore_into_target(\backup::TYPE_1SECTION, (int) $sectionid, (int) $this->teacher->id);
 
         foreach ($DB->get_records('quiz', ['course' => $this->target->id]) as $quiz) {
-            $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quiz->id]), $quiz->name);
+            $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]), $quiz->name);
         }
         $emails = $this->emails_starting_with($sink, 'Restored quiz:');
         $this->assertCount(2, $emails);
@@ -271,7 +274,7 @@ final class restore_monitoring_test extends \advanced_testcase {
         $sink = $this->redirectEmails();
         $newcm = duplicate_module($this->target, $cm);
 
-        $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $newcm->instance]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $newcm->instance]));
         $this->assertCount(1, $this->emails_starting_with($sink, 'New quiz created:'));
         $this->assertCount(0, $this->emails_starting_with($sink, 'Restored quiz:'));
     }
@@ -285,7 +288,7 @@ final class restore_monitoring_test extends \advanced_testcase {
         // Simulate quizzes that arrived through a restore (no score yet).
         $this->setUser($this->teacher);
         $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $this->target->id]);
-        $DB->delete_records('local_quizmeta_quiz_score', ['quizid' => $quiz->id]);
+        $DB->delete_records('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]);
 
         // An admin (no teacher role in the course) performs the restore.
         $this->setAdminUser();
@@ -303,7 +306,7 @@ final class restore_monitoring_test extends \advanced_testcase {
             ],
         ])->trigger();
 
-        $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $quiz->id]));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_quiz_score', ['quizid' => $quiz->id]));
         $this->assertCount(0, $this->emails_starting_with($sink, 'Restored quiz:'));
     }
 
@@ -314,7 +317,12 @@ final class restore_monitoring_test extends \advanced_testcase {
         global $DB;
 
         // Simulate a site that got the 2024010107 summary template.
-        $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored'], '*', MUST_EXIST);
+        $record = $DB->get_record(
+            'local_quizmetamonitor_email_tmpl',
+            ['template_key' => 'teacher_quizzes_restored'],
+            '*',
+            MUST_EXIST
+        );
         $record->subject    = 'Restored quizzes to review: {course_name}';
         $record->body_html  = "<p>Hello,</p>\n<p>{quiz_count} quiz(zes) were restored or imported into the course "
             . "<strong>{course_name}</strong>. Restored quizzes keep the settings from the backup (dates, password, "
@@ -323,25 +331,25 @@ final class restore_monitoring_test extends \advanced_testcase {
         $record->body_plain = "Hello,\n\n{quiz_count} quiz(zes) were restored or imported into the course \"{course_name}\". "
             . "Restored quizzes keep the settings from the backup (dates, password, Safe Exam Browser, etc.), "
             . "so please review them.\n\n{quiz_list}\n\nPlease review the quiz settings to ensure compliance.";
-        $DB->update_record('local_quizmeta_email_tmpl', $record);
+        $DB->update_record('local_quizmetamonitor_email_tmpl', $record);
 
         $this->assertTrue(local_quizmetamonitor_update_restored_template());
 
-        $updated = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
+        $updated = $DB->get_record('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
         $this->assertSame('Restored quiz: {quiz_name}', $updated->subject);
         $this->assertStringContainsString('{criteria_breakdown}', $updated->body_html);
         $this->assertStringNotContainsString('{quiz_list}', $updated->body_plain);
 
         // An admin-customised template is left alone.
         $DB->set_field(
-            'local_quizmeta_email_tmpl',
+            'local_quizmetamonitor_email_tmpl',
             'subject',
             'Our own: {quiz_name}',
             ['template_key' => 'teacher_quizzes_restored']
         );
         $this->assertFalse(local_quizmetamonitor_update_restored_template());
         $this->assertSame('Our own: {quiz_name}', $DB->get_field(
-            'local_quizmeta_email_tmpl',
+            'local_quizmetamonitor_email_tmpl',
             'subject',
             ['template_key' => 'teacher_quizzes_restored']
         ));
@@ -367,12 +375,15 @@ final class restore_monitoring_test extends \advanced_testcase {
     public function test_restored_template_is_added_once(): void {
         global $DB;
 
-        $this->assertTrue($DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']));
+        $this->assertTrue($DB->record_exists('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_quizzes_restored']));
 
-        $DB->delete_records('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
+        $DB->delete_records('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_quizzes_restored']);
         local_quizmetamonitor_add_restored_template();
         local_quizmetamonitor_add_restored_template();
 
-        $this->assertSame(1, $DB->count_records('local_quizmeta_email_tmpl', ['template_key' => 'teacher_quizzes_restored']));
+        $this->assertSame(
+            1,
+            $DB->count_records('local_quizmetamonitor_email_tmpl', ['template_key' => 'teacher_quizzes_restored'])
+        );
     }
 }

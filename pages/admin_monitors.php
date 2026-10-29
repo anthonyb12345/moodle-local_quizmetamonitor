@@ -58,7 +58,7 @@ if (data_submitted() && confirm_sesskey()) {
             } else if ($categoryid <= 0) {
                 $errormsg = get_string('error_selectcategory', 'local_quizmetamonitor');
             } else {
-                $exists = $DB->record_exists('local_quizmeta_exammonitor', [
+                $exists = $DB->record_exists('local_quizmetamonitor_exammonitor', [
                     'userid'     => $user->id,
                     'categoryid' => $categoryid,
                 ]);
@@ -71,7 +71,7 @@ if (data_submitted() && confirm_sesskey()) {
                     );
                 } else {
                     // Save to plugin table.
-                    $DB->insert_record('local_quizmeta_exammonitor', (object)[
+                    $DB->insert_record('local_quizmetamonitor_exammonitor', (object)[
                         'userid'      => $user->id,
                         'categoryid'  => $categoryid,
                         'assignedby'  => $USER->id,
@@ -100,7 +100,7 @@ if (data_submitted() && confirm_sesskey()) {
 
     if ($action === 'remove') {
         $id  = required_param('id', PARAM_INT);
-        $rec = $DB->get_record('local_quizmeta_exammonitor', ['id' => $id]);
+        $rec = $DB->get_record('local_quizmetamonitor_exammonitor', ['id' => $id]);
 
         if ($rec) {
             $roleid = $DB->get_field('role', 'id', ['shortname' => 'quizmeta_exammonitor']);
@@ -118,7 +118,7 @@ if (data_submitted() && confirm_sesskey()) {
                 );
             }
 
-            $DB->delete_records('local_quizmeta_exammonitor', ['id' => $id]);
+            $DB->delete_records('local_quizmetamonitor_exammonitor', ['id' => $id]);
             $successmsg = get_string('monitor_removed', 'local_quizmetamonitor');
         }
     }
@@ -391,7 +391,7 @@ $sql = "SELECT em.id,
                u.alternatename,
                u.email,
                cc.name AS categoryname
-          FROM {local_quizmeta_exammonitor} em
+          FROM {local_quizmetamonitor_exammonitor} em
           JOIN {user}              u  ON u.id  = em.userid
           JOIN {course_categories} cc ON cc.id = em.categoryid
       ORDER BY cc.name, u.lastname, u.firstname";
