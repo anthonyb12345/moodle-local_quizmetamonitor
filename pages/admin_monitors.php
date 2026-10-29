@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Admin page: assign and remove Exam Monitors for course categories.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -13,31 +36,27 @@ $PAGE->set_title(get_string('assignmonitors', 'local_quizmetamonitor'));
 $PAGE->set_heading(get_string('assignmonitors', 'local_quizmetamonitor'));
 $PAGE->set_pagelayout('admin');
 
-// ---- Errors/messages to display ------------------------------------ //
+// Errors/messages to display.
 $errormsg   = '';
 $successmsg = '';
 
-// ---- Handle POST actions ------------------------------------------- //
+// Handle POST actions.
 if (data_submitted() && confirm_sesskey()) {
     $action = optional_param('action', '', PARAM_ALPHA);
 
-    
     if ($action === 'add') {
         $email      = trim(optional_param('useremail', '', PARAM_EMAIL));
         $categoryid = required_param('categoryid', PARAM_INT);
 
         if (empty($email)) {
             $errormsg = get_string('error_emailrequired', 'local_quizmetamonitor');
-
         } else {
             $user = $DB->get_record('user', ['email' => $email, 'deleted' => 0]);
 
             if (!$user) {
                 $errormsg = get_string('error_usernotfound', 'local_quizmetamonitor', $email);
-
             } else if ($categoryid <= 0) {
                 $errormsg = get_string('error_selectcategory', 'local_quizmetamonitor');
-
             } else {
                 $exists = $DB->record_exists('local_quizmeta_exammonitor', [
                     'userid'     => $user->id,
@@ -45,8 +64,11 @@ if (data_submitted() && confirm_sesskey()) {
                 ]);
 
                 if ($exists) {
-                    $errormsg = get_string('error_alreadyassigned', 'local_quizmetamonitor',
-                        fullname($user));
+                    $errormsg = get_string(
+                        'error_alreadyassigned',
+                        'local_quizmetamonitor',
+                        fullname($user)
+                    );
                 } else {
                     // Save to plugin table.
                     $DB->insert_record('local_quizmeta_exammonitor', (object)[
@@ -56,18 +78,21 @@ if (data_submitted() && confirm_sesskey()) {
                         'timecreated' => time(),
                     ]);
 
-                    $roleid = get_or_create_exammonitor_role();
+                    $roleid = local_quizmetamonitor_get_or_create_exammonitor_role();
 
                     // 1. Assign role at category context (for plugin views).
                     $catcontext = context_coursecat::instance($categoryid);
                     role_assign($roleid, $user->id, $catcontext->id);
 
                     // 2. Assign role at each course context inside the category
-                    //    so the monitor can enter courses and edit quizzes.
-                    assign_role_to_all_courses_in_category($user->id, $categoryid, $roleid);
+                    // so the monitor can enter courses and edit quizzes.
+                    local_quizmetamonitor_assign_role_to_all_courses_in_category($user->id, $categoryid, $roleid);
 
-                    $successmsg = get_string('monitor_assigned', 'local_quizmetamonitor',
-                        fullname($user));
+                    $successmsg = get_string(
+                        'monitor_assigned',
+                        'local_quizmetamonitor',
+                        fullname($user)
+                    );
                 }
             }
         }
@@ -86,7 +111,7 @@ if (data_submitted() && confirm_sesskey()) {
                 role_unassign($roleid, $rec->userid, $catcontext->id);
 
                 // Remove from all course contexts in that category.
-                unassign_role_from_all_courses_in_category(
+                local_quizmetamonitor_unassign_role_from_all_courses_in_category(
                     $rec->userid,
                     $rec->categoryid,
                     $roleid
@@ -99,8 +124,13 @@ if (data_submitted() && confirm_sesskey()) {
     }
 }
 
-// ---- Helper function ----------------------------------------------- //
-function get_or_create_exammonitor_role(): int {
+// Helper function.
+/**
+ * Get the Exam Monitor role id, creating the role and setting its capabilities if needed.
+ *
+ * @return int Role id.
+ */
+function local_quizmetamonitor_get_or_create_exammonitor_role(): int {
     global $DB;
 
     $shortname = 'quizmeta_exammonitor';
@@ -108,9 +138,9 @@ function get_or_create_exammonitor_role(): int {
 
     if (!$roleid) {
         $roleid = create_role(
-            'Exam Monitor (Quiz Metadata)',
+            get_string('examrole_name', 'local_quizmetamonitor'),
             $shortname,
-            'Can view and edit quizzes within their assigned category. Cannot access other course resources.',
+            get_string('examrole_description', 'local_quizmetamonitor'),
             ''
         );
 
@@ -119,33 +149,52 @@ function get_or_create_exammonitor_role(): int {
 
     $sysctx = context_system::instance();
 
-    // ---------------------------------------------------------------- //
-    // Plugin capabilities.                                              //
-    // ---------------------------------------------------------------- //
+    // Plugin capabilities.
     if (get_capability_info('local/quizmetamonitor:viewcategory')) {
-        assign_capability('local/quizmetamonitor:viewcategory',
-            CAP_ALLOW, $roleid, $sysctx->id, true);
+        assign_capability(
+            'local/quizmetamonitor:viewcategory',
+            CAP_ALLOW,
+            $roleid,
+            $sysctx->id,
+            true
+        );
     }
     if (get_capability_info('local/quizmetamonitor:receiveexamalert')) {
-        assign_capability('local/quizmetamonitor:receiveexamalert',
-            CAP_ALLOW, $roleid, $sysctx->id, true);
+        assign_capability(
+            'local/quizmetamonitor:receiveexamalert',
+            CAP_ALLOW,
+            $roleid,
+            $sysctx->id,
+            true
+        );
     }
 
-    // ---------------------------------------------------------------- //
-    // Course access.                                                    //
-    // ---------------------------------------------------------------- //
-    assign_capability('moodle/course:view',
-        CAP_ALLOW, $roleid, $sysctx->id, true);
-    assign_capability('moodle/course:viewhiddencourses',
-        CAP_ALLOW, $roleid, $sysctx->id, true);
+    // Course access.
+    assign_capability(
+        'moodle/course:view',
+        CAP_ALLOW,
+        $roleid,
+        $sysctx->id,
+        true
+    );
+    assign_capability(
+        'moodle/course:viewhiddencourses',
+        CAP_ALLOW,
+        $roleid,
+        $sysctx->id,
+        true
+    );
 
     // Needed so Moodle allows saving quiz settings form.
-    assign_capability('moodle/course:manageactivities',
-        CAP_ALLOW, $roleid, $sysctx->id, true);
+    assign_capability(
+        'moodle/course:manageactivities',
+        CAP_ALLOW,
+        $roleid,
+        $sysctx->id,
+        true
+    );
 
-    // ---------------------------------------------------------------- //
-    // Quiz — full management access.                                    //
-    // ---------------------------------------------------------------- //
+    // Quiz — full management access.
     $quizcaps = [
         'mod/quiz:view',
         'mod/quiz:manage',
@@ -162,19 +211,17 @@ function get_or_create_exammonitor_role(): int {
         }
     }
 
-    // ---------------------------------------------------------------- //
-    // Prevent course-level editing that is not quiz related.            //
-    // ---------------------------------------------------------------- //
+    // Prevent course-level editing that is not quiz related.
     $preventcaps = [
-        'moodle/course:update',       // Cannot edit course settings.
-        'moodle/course:delete',       // Cannot delete the course.
+        'moodle/course:update', // Cannot edit course settings.
+        'moodle/course:delete', // Cannot delete the course.
         'moodle/course:managecourseadd', // Cannot create courses.
-        'moodle/grade:viewall',       // Cannot see full gradebook.
-        'moodle/grade:edit',          // Cannot edit grades.
-        'moodle/role:assign',         // Cannot assign roles.
-        'moodle/role:override',       // Cannot override roles.
+        'moodle/grade:viewall', // Cannot see full gradebook.
+        'moodle/grade:edit', // Cannot edit grades.
+        'moodle/role:assign', // Cannot assign roles.
+        'moodle/role:override', // Cannot override roles.
         'moodle/course:activityvisibility', // Cannot hide/show activities.
-        'moodle/course:sectionvisibility',  // Cannot hide/show sections.
+        'moodle/course:sectionvisibility', // Cannot hide/show sections.
     ];
 
     foreach ($preventcaps as $cap) {
@@ -183,34 +230,17 @@ function get_or_create_exammonitor_role(): int {
         }
     }
 
-    // ---------------------------------------------------------------- //
-    // PROHIBIT file and resource access.                                //
-    // Must use CAP_PROHIBIT because Moodle grants mod/resource:view    //
-    // to all authenticated users by default. CAP_PREVENT alone is      //
-    // not strong enough to override that default grant.                 //
-    // ---------------------------------------------------------------- //
-    // $prohibitcaps = [
-    //     'mod/resource:view',   // Files and PDFs.
-    //     'mod/folder:view',     // Folders.
-    //     'mod/page:view',       // Pages.
-    //     'mod/url:view',        // URLs.
-    //     'mod/book:read',       // Books.
-    //     'mod/imscp:view',      // IMS content packages.
-    // ];
-
-    // foreach ($prohibitcaps as $cap) {
-    //     if (get_capability_info($cap)) {
-    //         assign_capability($cap, CAP_PROHIBIT, $roleid, $sysctx->id, true);
-    //     }
-    // }
-
     return (int) $roleid;
 }
 /**
  * Assign the exam monitor role at the context of every course
  * that is a direct child of the given category.
+ *
+ * @param int $userid User ID.
+ * @param int $categoryid Course category ID.
+ * @param int $roleid Role ID.
  */
-function assign_role_to_all_courses_in_category(
+function local_quizmetamonitor_assign_role_to_all_courses_in_category(
     int $userid,
     int $categoryid,
     int $roleid
@@ -233,8 +263,12 @@ function assign_role_to_all_courses_in_category(
 
 /**
  * Remove the exam monitor role from all course contexts in a category.
+ *
+ * @param int $userid User ID.
+ * @param int $categoryid Course category ID.
+ * @param int $roleid Role ID.
  */
-function unassign_role_from_all_courses_in_category(
+function local_quizmetamonitor_unassign_role_from_all_courses_in_category(
     int $userid,
     int $categoryid,
     int $roleid
@@ -254,7 +288,7 @@ function unassign_role_from_all_courses_in_category(
         role_unassign($roleid, $userid, $coursecontext->id);
     }
 }
-// ---- Render -------------------------------------------------------- //
+// Render.
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('assignmonitors', 'local_quizmetamonitor'));
 
@@ -267,7 +301,7 @@ if ($successmsg) {
 
 $categories = core_course_category::make_categories_list();
 
-// ---- Assignment form ----------------------------------------------- //
+// Assignment form.
 echo html_writer::start_tag('form', [
     'method' => 'post',
     'action' => $PAGE->url->out(false),
@@ -333,14 +367,17 @@ echo html_writer::empty_tag('input', [
     'class' => 'btn btn-primary',
 ]);
 
-echo html_writer::end_div(); // card-body
-echo html_writer::end_div(); // card
+echo html_writer::end_div(); // Card-body.
+echo html_writer::end_div(); // Card.
 
 echo html_writer::end_tag('form');
 
-// ---- Current assignments table ------------------------------------- //
-echo html_writer::tag('h4', get_string('currentassignments', 'local_quizmetamonitor'),
-    ['class' => 'mt-4 mb-3']);
+// Current assignments table.
+echo html_writer::tag(
+    'h4',
+    get_string('currentassignments', 'local_quizmetamonitor'),
+    ['class' => 'mt-4 mb-3']
+);
 
 $sql = "SELECT em.id,
                em.userid,

@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace local_quizmetamonitor;
 
 defined('MOODLE_INTERNAL') || die();
@@ -11,15 +26,19 @@ use quizaccess_seb\settings_provider;
  * breakdown label shows which one was picked.
  *
  * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(scoring_engine::class)]
 final class seb_criterion_test extends \advanced_testcase {
-
     /** @var \stdClass */
     private $course;
     /** @var \stdClass */
     private $teacher;
 
+    /**
+     * Set up the course, users and environment used by the tests.
+     */
     protected function setUp(): void {
         global $PAGE;
         parent::setUp();
@@ -33,6 +52,12 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->setUser($this->teacher);
     }
 
+    /**
+     * Create a quiz in the test course with the given Safe Exam Browser option.
+     *
+     * @param int $requireseb settings_provider::USE_SEB_* value.
+     * @return \stdClass
+     */
     private function create_quiz(int $requireseb): \stdClass {
         return $this->getDataGenerator()->create_module('quiz', [
             'course'                     => $this->course->id,
@@ -40,6 +65,12 @@ final class seb_criterion_test extends \advanced_testcase {
         ]);
     }
 
+    /**
+     * Score a quiz and return its Safe Exam Browser breakdown item.
+     *
+     * @param \stdClass $quiz Quiz record.
+     * @return array
+     */
     private function seb_item(\stdClass $quiz): array {
         foreach (scoring_engine::compute_score((int) $quiz->id)['breakdown'] as $item) {
             if ($item['key'] === 'seb_enabled') {
@@ -49,6 +80,9 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->fail('seb_enabled missing from breakdown');
     }
 
+    /**
+     * Seb no gets full points and no label.
+     */
     public function test_seb_no_gets_full_points_and_no_label(): void {
         $item = $this->seb_item($this->create_quiz(settings_provider::USE_SEB_NO));
 
@@ -58,6 +92,9 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertSame($item['points_possible'], $item['points_earned']);
     }
 
+    /**
+     * Seb yes gets full points and yes label.
+     */
     public function test_seb_yes_gets_full_points_and_yes_label(): void {
         $item = $this->seb_item($this->create_quiz(settings_provider::USE_SEB_CONFIG_MANUALLY));
 
@@ -67,14 +104,17 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertSame($item['points_possible'], $item['points_earned']);
     }
 
+    /**
+     * Each seb yes option has its own label.
+     */
     public function test_each_seb_yes_option_has_its_own_label(): void {
         global $DB;
 
         $expected = [
-            settings_provider::USE_SEB_CONFIG_MANUALLY => ['manual',   'Safe Exam Browser - Yes - Configure manually'],
+            settings_provider::USE_SEB_CONFIG_MANUALLY => ['manual', 'Safe Exam Browser - Yes - Configure manually'],
             settings_provider::USE_SEB_TEMPLATE        => ['template', 'Safe Exam Browser - Yes - Use an existing template'],
-            settings_provider::USE_SEB_UPLOAD_CONFIG   => ['upload',   'Safe Exam Browser - Yes - Upload my own config'],
-            settings_provider::USE_SEB_CLIENT_CONFIG   => ['client',   'Safe Exam Browser - Yes - Use SEB client config'],
+            settings_provider::USE_SEB_UPLOAD_CONFIG   => ['upload', 'Safe Exam Browser - Yes - Upload my own config'],
+            settings_provider::USE_SEB_CLIENT_CONFIG   => ['client', 'Safe Exam Browser - Yes - Use SEB client config'],
         ];
 
         $quiz = $this->create_quiz(settings_provider::USE_SEB_CONFIG_MANUALLY);
@@ -89,19 +129,28 @@ final class seb_criterion_test extends \advanced_testcase {
         }
     }
 
+    /**
+     * Switching between yes options emails both options.
+     */
     public function test_switching_between_yes_options_emails_both_options(): void {
         global $DB;
 
         $quiz = $this->create_quiz(settings_provider::USE_SEB_CONFIG_MANUALLY);
 
         $sink = $this->redirectEmails();
-        $DB->set_field('quizaccess_seb_quizsettings', 'requiresafeexambrowser', settings_provider::USE_SEB_CLIENT_CONFIG,
-            ['quizid' => $quiz->id]);
+        $DB->set_field(
+            'quizaccess_seb_quizsettings',
+            'requiresafeexambrowser',
+            settings_provider::USE_SEB_CLIENT_CONFIG,
+            ['quizid' => $quiz->id]
+        );
         $cm = get_coursemodule_from_instance('quiz', $quiz->id, $this->course->id, false, MUST_EXIST);
         \core\event\course_module_updated::create_from_cm($cm)->trigger();
 
-        $ours = array_values(array_filter($sink->get_messages(),
-            fn($m) => str_starts_with($m->subject, 'Quiz security settings updated:')));
+        $ours = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => str_starts_with($m->subject, 'Quiz security settings updated:')
+        ));
         $this->assertCount(1, $ours);
         $this->assertStringContainsString(
             '<li>[Safe Exam Browser - Yes - Configure manually] → [Safe Exam Browser - Yes - Use SEB client config]</li>',
@@ -109,12 +158,18 @@ final class seb_criterion_test extends \advanced_testcase {
         );
     }
 
+    /**
+     * Scores stored with old yes choice still display.
+     */
     public function test_scores_stored_with_old_yes_choice_still_display(): void {
         $item = ['key' => 'seb_enabled', 'label' => 'Safe Exam Browser - Yes', 'choice' => 'yes'];
 
         $this->assertSame('Safe Exam Browser - Yes', scoring_engine::display_label($item));
     }
 
+    /**
+     * Seb choice does not change score.
+     */
     public function test_seb_choice_does_not_change_score(): void {
         $without = scoring_engine::compute_score((int) $this->create_quiz(settings_provider::USE_SEB_NO)->id);
         $with    = scoring_engine::compute_score((int) $this->create_quiz(settings_provider::USE_SEB_CONFIG_MANUALLY)->id);
@@ -122,6 +177,9 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertSame($with['score_percent'], $without['score_percent']);
     }
 
+    /**
+     * Switching seb on edit emails editor even though score is same.
+     */
     public function test_switching_seb_on_edit_emails_editor_even_though_score_is_same(): void {
         global $DB;
 
@@ -130,15 +188,21 @@ final class seb_criterion_test extends \advanced_testcase {
 
         // Teacher switches SEB to "No" and saves the quiz settings.
         $sink = $this->redirectEmails();
-        $DB->set_field('quizaccess_seb_quizsettings', 'requiresafeexambrowser', settings_provider::USE_SEB_NO,
-            ['quizid' => $quiz->id]);
+        $DB->set_field(
+            'quizaccess_seb_quizsettings',
+            'requiresafeexambrowser',
+            settings_provider::USE_SEB_NO,
+            ['quizid' => $quiz->id]
+        );
         $cm = get_coursemodule_from_instance('quiz', $quiz->id, $this->course->id, false, MUST_EXIST);
         \core\event\course_module_updated::create_from_cm($cm)->trigger();
 
         $this->assertSame($before, scoring_engine::compute_score((int) $quiz->id)['score_percent']);
 
-        $ours = array_values(array_filter($sink->get_messages(),
-            fn($m) => str_starts_with($m->subject, 'Quiz security settings updated:')));
+        $ours = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => str_starts_with($m->subject, 'Quiz security settings updated:')
+        ));
         $this->assertCount(1, $ours);
         $this->assertSame($this->teacher->email, $ours[0]->to);
         $this->assertStringContainsString(
@@ -147,6 +211,9 @@ final class seb_criterion_test extends \advanced_testcase {
         );
     }
 
+    /**
+     * Label is resolved from choice at display time.
+     */
     public function test_label_is_resolved_from_choice_at_display_time(): void {
         // The stored label is whatever language was active when scored; display uses the choice.
         $item = ['key' => 'seb_enabled', 'label' => 'Safe Exam Browser - Non, ...', 'choice' => 'no'];
@@ -160,6 +227,9 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertSame('Open date set', scoring_engine::display_label(['key' => 'open_date_set', 'label' => 'Open date set']));
     }
 
+    /**
+     * Label follows reader language.
+     */
     public function test_label_follows_reader_language(): void {
         global $CFG;
 
@@ -168,8 +238,10 @@ final class seb_criterion_test extends \advanced_testcase {
         // strings come from local/quizmetamonitor/lang/fr.
         if (!get_string_manager()->translation_exists('fr')) {
             make_writable_directory($CFG->dataroot . '/lang/fr');
-            file_put_contents($CFG->dataroot . '/lang/fr/langconfig.php',
-                "<?php\n\$string['thislanguage'] = 'Français';\n\$string['parentlanguage'] = '';\n");
+            file_put_contents(
+                $CFG->dataroot . '/lang/fr/langconfig.php',
+                "<?php\n\$string['thislanguage'] = 'Français';\n\$string['parentlanguage'] = '';\n"
+            );
             get_string_manager()->reset_caches(); // The installed-languages list is cached.
         }
         $this->assertTrue(get_string_manager()->translation_exists('fr'));
@@ -199,6 +271,7 @@ final class seb_criterion_test extends \advanced_testcase {
     /**
      * Decoded bodies of the teacher "New quiz created" emails captured by $sink.
      *
+     * @param \phpunit_phpmailer_sink $sink Email sink.
      * @return string[]
      */
     private function created_email_bodies($sink): array {
@@ -206,6 +279,9 @@ final class seb_criterion_test extends \advanced_testcase {
         return array_values(array_map(fn($m) => quoted_printable_decode($m->body), $ours));
     }
 
+    /**
+     * Seb no adds notice after table.
+     */
     public function test_seb_no_adds_notice_after_table(): void {
         $sink = $this->redirectEmails();
         $this->create_quiz(settings_provider::USE_SEB_NO);
@@ -218,10 +294,15 @@ final class seb_criterion_test extends \advanced_testcase {
             $bodies[0]
         );
         // Plain-text part: same sentence without tags.
-        $this->assertStringContainsString('You have chosen NOT to use Safe Exam Browser, which is ONLY applicable',
-            str_replace(["\r\n", "\n"], ' ', $bodies[0]));
+        $this->assertStringContainsString(
+            'You have chosen NOT to use Safe Exam Browser, which is ONLY applicable',
+            str_replace(["\r\n", "\n"], ' ', $bodies[0])
+        );
     }
 
+    /**
+     * Seb yes has no notice.
+     */
     public function test_seb_yes_has_no_notice(): void {
         $sink = $this->redirectEmails();
         $this->create_quiz(settings_provider::USE_SEB_CONFIG_MANUALLY);
@@ -231,6 +312,9 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertStringNotContainsString('NOT to use Safe Exam Browser', $bodies[0]);
     }
 
+    /**
+     * Exam monitor alert has no notice.
+     */
     public function test_exam_monitor_alert_has_no_notice(): void {
         global $DB;
 
@@ -244,7 +328,10 @@ final class seb_criterion_test extends \advanced_testcase {
 
         $sink = $this->redirectEmails();
         notification_manager::notify_exam_monitors_alert(
-            $result, $DB->get_record('quiz', ['id' => $quiz->id]), $this->course, 'Category'
+            $result,
+            $DB->get_record('quiz', ['id' => $quiz->id]),
+            $this->course,
+            'Category'
         );
 
         $messages = $sink->get_messages();
@@ -253,12 +340,17 @@ final class seb_criterion_test extends \advanced_testcase {
         $this->assertStringNotContainsString('NOT to use Safe Exam Browser', quoted_printable_decode($messages[0]->body));
     }
 
+    /**
+     * Email table shows chosen option.
+     */
     public function test_email_table_shows_chosen_option(): void {
         $sink = $this->redirectEmails();
         $this->create_quiz(settings_provider::USE_SEB_NO);
 
-        $ours = array_values(array_filter($sink->get_messages(),
-            fn($m) => str_starts_with($m->subject, 'New quiz created:')));
+        $ours = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => str_starts_with($m->subject, 'New quiz created:')
+        ));
         $this->assertCount(1, $ours);
 
         $body = quoted_printable_decode($ours[0]->body);

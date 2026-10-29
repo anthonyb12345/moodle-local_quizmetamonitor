@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Admin page: score existing quizzes (backfill) or rescore all quizzes.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -17,11 +40,8 @@ $confirmed = optional_param('confirm', 0, PARAM_INT);
 $results   = [];
 $errors    = [];
 
-// -------------------------------------------------------------------- //
-// Run backfill when confirmed                                           //
-// -------------------------------------------------------------------- //
+// Run backfill when confirmed.
 if ($confirmed && confirm_sesskey()) {
-
     // Get all quiz ids that do NOT yet have a score record.
     $sql = "SELECT q.id
               FROM {quiz} q
@@ -55,9 +75,9 @@ if ($confirmed && confirm_sesskey()) {
                 'status' => 'ok',
             ];
             $success++;
-
         } catch (\Throwable $e) {
-            $quizname  = $DB->get_field('quiz', 'name', ['id' => $quizid]) ?: 'Unknown';
+            $quizname  = $DB->get_field('quiz', 'name', ['id' => $quizid])
+                ?: get_string('backfill_unknownquiz', 'local_quizmetamonitor');
             $results[] = [
                 'quizid' => $quizid,
                 'name'   => $quizname,
@@ -74,8 +94,11 @@ if ($confirmed && confirm_sesskey()) {
     echo $OUTPUT->heading(get_string('backfill', 'local_quizmetamonitor'));
 
     echo $OUTPUT->notification(
-        get_string('backfill_complete', 'local_quizmetamonitor',
-            ['total' => $total, 'success' => $success, 'failed' => $failed]),
+        get_string(
+            'backfill_complete',
+            'local_quizmetamonitor',
+            ['total' => $total, 'success' => $success, 'failed' => $failed]
+        ),
         $failed > 0 ? 'warning' : 'success'
     );
 
@@ -83,19 +106,25 @@ if ($confirmed && confirm_sesskey()) {
         $table = new html_table();
         $table->head = [
             get_string('quizname', 'local_quizmetamonitor'),
-            get_string('score',    'local_quizmetamonitor'),
-            get_string('status',   'local_quizmetamonitor'),
+            get_string('score', 'local_quizmetamonitor'),
+            get_string('status', 'local_quizmetamonitor'),
         ];
         $table->attributes['class'] = 'generaltable table table-sm';
 
         foreach ($results as $r) {
             if ($r['status'] === 'ok') {
-                $statuscell = html_writer::tag('span', 'Scored',
-                    ['class' => 'badge badge-success']);
+                $statuscell = html_writer::tag(
+                    'span',
+                    get_string('backfill_scored', 'local_quizmetamonitor'),
+                    ['class' => 'badge badge-success']
+                );
                 $scorecell  = $r['score'] . '%';
             } else {
-                $statuscell = html_writer::tag('span', 'Error: ' . $r['error'],
-                    ['class' => 'badge badge-danger']);
+                $statuscell = html_writer::tag(
+                    'span',
+                    get_string('backfill_error', 'local_quizmetamonitor', s($r['error'])),
+                    ['class' => 'badge badge-danger']
+                );
                 $scorecell  = '—';
             }
 
@@ -122,9 +151,7 @@ if ($confirmed && confirm_sesskey()) {
     exit;
 }
 
-// -------------------------------------------------------------------- //
-// Confirmation page                                                     //
-// -------------------------------------------------------------------- //
+// Confirmation page.
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('backfill', 'local_quizmetamonitor'));
 
@@ -136,18 +163,25 @@ $unscored      = $totalquizzes - $alreadyscored;
 echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
 
-echo html_writer::tag('p',
+echo html_writer::tag(
+    'p',
     get_string('backfill_description', 'local_quizmetamonitor'),
     ['class' => 'card-text']
 );
 
 echo html_writer::start_tag('ul');
-echo html_writer::tag('li',
-    get_string('totalquizzesindb', 'local_quizmetamonitor') . ': <strong>' . $totalquizzes . '</strong>');
-echo html_writer::tag('li',
-    get_string('alreadyscored', 'local_quizmetamonitor') . ': <strong>' . $alreadyscored . '</strong>');
-echo html_writer::tag('li',
-    get_string('unscoredquizzes', 'local_quizmetamonitor') . ': <strong>' . $unscored . '</strong>');
+echo html_writer::tag(
+    'li',
+    get_string('totalquizzesindb', 'local_quizmetamonitor') . ': <strong>' . $totalquizzes . '</strong>'
+);
+echo html_writer::tag(
+    'li',
+    get_string('alreadyscored', 'local_quizmetamonitor') . ': <strong>' . $alreadyscored . '</strong>'
+);
+echo html_writer::tag(
+    'li',
+    get_string('unscoredquizzes', 'local_quizmetamonitor') . ': <strong>' . $unscored . '</strong>'
+);
 echo html_writer::end_tag('ul');
 
 echo $OUTPUT->notification(
@@ -158,23 +192,23 @@ echo $OUTPUT->notification(
 echo html_writer::end_div();
 echo html_writer::end_div();
 
-// ---- Backfill only new (unscored) quizzes -------------------------- //
+// Backfill only new (unscored) quizzes.
 echo html_writer::start_tag('form', ['method' => 'post']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'confirm',    'value' => '1']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'rescore_all','value' => '0']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',    'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'confirm', 'value' => '1']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'rescore_all', 'value' => '0']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', [
     'type'  => 'submit',
-    'value' => get_string('backfill_newonly', 'local_quizmetamonitor',  $unscored),
+    'value' => get_string('backfill_newonly', 'local_quizmetamonitor', $unscored),
     'class' => 'btn btn-primary mr-2',
 ]);
 echo html_writer::end_tag('form');
 
-// ---- Rescore ALL quizzes ------------------------------------------ //
+// Rescore ALL quizzes.
 echo html_writer::start_tag('form', ['method' => 'post', 'class' => 'mt-2']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'confirm',    'value' => '1']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'rescore_all','value' => '1']);
-echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey',    'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'confirm', 'value' => '1']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'rescore_all', 'value' => '1']);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
 echo html_writer::empty_tag('input', [
     'type'  => 'submit',
     'value' => get_string('backfill_rescore_all', 'local_quizmetamonitor', $totalquizzes),

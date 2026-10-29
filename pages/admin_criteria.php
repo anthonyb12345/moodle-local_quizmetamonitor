@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Admin page: configure the scoring criteria, site-wide or per category.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -23,17 +46,13 @@ $categories        = core_course_category::make_categories_list();
 $isdefault         = ($categoryid === 0);
 $dbcategoryid      = $isdefault ? null : $categoryid;
 
-// -------------------------------------------------------------------- //
-// Handle save                                                           //
-// -------------------------------------------------------------------- //
+// Handle save.
 if (data_submitted() && confirm_sesskey()) {
-
     // Require a description.
     $description = trim(optional_param('change_description', '', PARAM_TEXT));
     if (empty($description)) {
         $saveerror = get_string('error_descriptionrequired', 'local_quizmetamonitor');
     } else {
-
         $now      = time();
         $snapshot = [];
 
@@ -112,9 +131,7 @@ if (data_submitted() && confirm_sesskey()) {
     }
 }
 
-// -------------------------------------------------------------------- //
-// Load current values                                                   //
-// -------------------------------------------------------------------- //
+// Load current values.
 $table      = $isdefault ? 'local_quizmeta_crit_default' : 'local_quizmeta_crit_category';
 $conditions = $isdefault ? [] : ['categoryid' => $categoryid];
 $existing   = $DB->get_records($table, $conditions, '', 'criterion_key, points, enabled');
@@ -125,9 +142,7 @@ $history = \local_quizmetamonitor\config_history::get_history(
     $dbcategoryid
 );
 
-// -------------------------------------------------------------------- //
-// Render                                                                //
-// -------------------------------------------------------------------- //
+// Render.
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('configurecriteria', 'local_quizmetamonitor'));
 
@@ -169,13 +184,14 @@ if (!empty($saveerror)) {
     echo $OUTPUT->notification($saveerror, 'error');
 }
 
-// -------------------------------------------------------------------- //
-// Criteria edit form                                                    //
-// -------------------------------------------------------------------- //
+// Criteria edit form.
 echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
-echo html_writer::tag('h5', get_string('currentcriteria', 'local_quizmetamonitor'),
-    ['class' => 'card-title']);
+echo html_writer::tag(
+    'h5',
+    get_string('currentcriteria', 'local_quizmetamonitor'),
+    ['class' => 'card-title']
+);
 
 echo html_writer::start_tag('form', ['method' => 'post']);
 echo html_writer::input_hidden_params($PAGE->url);
@@ -185,14 +201,14 @@ echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', '
 $criteriatbl                = new html_table();
 $criteriatbl->head          = [
     get_string('criterion', 'local_quizmetamonitor'),
-    get_string('points',    'local_quizmetamonitor'),
-    get_string('enabled',   'local_quizmetamonitor'),
+    get_string('points', 'local_quizmetamonitor'),
+    get_string('enabled', 'local_quizmetamonitor'),
 ];
 $criteriatbl->attributes    = ['class' => 'generaltable table mb-3'];
 
 foreach ($availablecriteria as $key => $label) {
     $ex      = $existing[$key] ?? null;
-    $points  = $ex ? (float) $ex->points  : 1;
+    $points  = $ex ? (float) $ex->points : 1;
     $enabled = $ex ? (int)   $ex->enabled : 1;
 
     $criteriatbl->data[] = [
@@ -220,7 +236,7 @@ foreach ($availablecriteria as $key => $label) {
 
 echo html_writer::table($criteriatbl);
 
-// ---- Change description (required) --------------------------------- //
+// Change description (required).
 echo html_writer::start_div('form-group');
 echo html_writer::tag(
     'label',
@@ -231,7 +247,8 @@ echo html_writer::tag(
 echo html_writer::tag(
     'textarea',
     isset($saveerror) ? htmlspecialchars(
-        optional_param('change_description', '', PARAM_TEXT), ENT_QUOTES
+        optional_param('change_description', '', PARAM_TEXT),
+        ENT_QUOTES
     ) : '',
     [
         'id'          => 'change_description',
@@ -256,12 +273,10 @@ echo html_writer::empty_tag('input', [
 ]);
 
 echo html_writer::end_tag('form');
-echo html_writer::end_div(); // card-body
-echo html_writer::end_div(); // card
+echo html_writer::end_div(); // Card-body.
+echo html_writer::end_div(); // Card.
 
-// -------------------------------------------------------------------- //
-// Change history                                                        //
-// -------------------------------------------------------------------- //
+// Change history.
 echo html_writer::tag(
     'h4',
     get_string('changehistory', 'local_quizmetamonitor'),

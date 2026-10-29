@@ -1,6 +1,9 @@
-/* ------------------------------------------------------------------ *
- * local_quizmetamonitor — plugin styles                              *
- * ------------------------------------------------------------------ */
+/**
+ * Styles for local_quizmetamonitor.
+ *
+ * Rules on generic Bootstrap classes are scoped to this plugin's pages with
+ * .path-local-quizmetamonitor so they do not affect the rest of the site.
+ */
 
 .quizmetamonitor-table {
     width: 100%;
@@ -28,12 +31,12 @@
     font-weight: 600;
 }
 
-/* Detail page summary card */
-.card {
+/* Detail page summary card. */
+.path-local-quizmetamonitor .card {
     border: 1px solid #dee2e6;
     border-radius: 4px;
 }
 
-.card-body dl.row dt {
+.path-local-quizmetamonitor .card-body dl.row dt {
     font-weight: 600;
 }

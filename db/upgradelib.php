@@ -1,5 +1,26 @@
 <?php
-defined('MOODLE_INTERNAL') || die();
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Upgrade helpers for local_quizmetamonitor: default email templates and the steps that add or update them.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
 /**
  * Default "teacher_score_changed" template (since 2024010106).
@@ -13,7 +34,8 @@ function local_quizmetamonitor_default_settings_changed_template(): array {
     return [
         'subject'    => 'Quiz security settings updated: {quiz_name}',
         'body_html'  => '<p>Hello,</p>'
-            . "\n" . '<p>The security settings of the quiz <strong>{quiz_name}</strong> in <strong>{course_name}</strong> were changed.</p>'
+            . "\n" . '<p>The security settings of the quiz <strong>{quiz_name}</strong> in'
+            . ' <strong>{course_name}</strong> were changed.</p>'
             . "\n" . '<p>Security score: <strong>{score_change}</strong> (threshold: {threshold_percent}%)</p>'
             . "\n" . '<h3>What changed:</h3>'
             . "\n" . '{criteria_changes}'
@@ -180,7 +202,9 @@ function local_quizmetamonitor_update_settings_changed_template(): bool {
 <p>Previous score: {previous_score}% &rarr; New score: <strong>{score_percent}%</strong> (threshold: {threshold_percent}%)</p>
 <h3>Criteria breakdown:</h3>
 {criteria_breakdown}',
-        'body_plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in \"{course_name}\" was recently edited.\n\nPrevious score: {previous_score}% -> New score: {score_percent}% (threshold: {threshold_percent}%)\n\nCriteria breakdown:\n{criteria_breakdown}",
+        'body_plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in \"{course_name}\" was recently edited.\n\n"
+            . "Previous score: {previous_score}% -> New score: {score_percent}% (threshold: {threshold_percent}%)\n\n"
+            . "Criteria breakdown:\n{criteria_breakdown}",
     ];
 
     $record = $DB->get_record('local_quizmeta_email_tmpl', ['template_key' => 'teacher_score_changed']);

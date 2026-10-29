@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Admin page: filter quizzes and export their security metadata as CSV.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -7,18 +30,14 @@ require_capability('local/quizmetamonitor:viewall', $systemcontext);
 
 global $DB;
 
-// -------------------------------------------------------------------- //
-// Read filter parameters                                                //
-// -------------------------------------------------------------------- //
-$filtercategory  = optional_param('categoryid',   0,  PARAM_INT);
-$filterstatus    = optional_param('status',        '', PARAM_ALPHA);  // 'below', 'ok', ''
-$filterdatefrom  = optional_param('datefrom',      '', PARAM_TEXT);   // Y-m-d string
-$filterdateto    = optional_param('dateto',        '', PARAM_TEXT);   // Y-m-d string
-$format          = optional_param('format',        '', PARAM_ALPHA);
+// Read filter parameters.
+$filtercategory  = optional_param('categoryid', 0, PARAM_INT);
+$filterstatus    = optional_param('status', '', PARAM_ALPHA);  // One of 'below', 'ok' or empty.
+$filterdatefrom  = optional_param('datefrom', '', PARAM_TEXT);   // Y-m-d string.
+$filterdateto    = optional_param('dateto', '', PARAM_TEXT);   // Y-m-d string.
+$format          = optional_param('format', '', PARAM_ALPHA);
 
-// -------------------------------------------------------------------- //
-// Convert date strings to timestamps                                    //
-// -------------------------------------------------------------------- //
+// Convert date strings to timestamps.
 $timestampfrom = 0;
 $timestampto   = 0;
 $dateerror     = '';
@@ -48,9 +67,7 @@ if ($timestampfrom && $timestampto && $timestampfrom > $timestampto) {
     $dateerror = get_string('error_datefromafterdate', 'local_quizmetamonitor');
 }
 
-// -------------------------------------------------------------------- //
-// Build WHERE clause                                                    //
-// -------------------------------------------------------------------- //
+// Build WHERE clause.
 $where  = '1 = 1';
 $params = [];
 
@@ -76,9 +93,7 @@ if ($timestampto > 0) {
     $params['dateto']     = $timestampto;
 }
 
-// -------------------------------------------------------------------- //
-// Core SQL                                                              //
-// -------------------------------------------------------------------- //
+// Core SQL.
 $selectfields = "qs.quizid,
                  qs.score_percent,
                  qs.threshold_applied,
@@ -103,27 +118,38 @@ $fromclause = "{local_quizmeta_quiz_score} qs
                JOIN {course}            c  ON c.id  = qs.courseid
                JOIN {course_categories} cc ON cc.id = qs.categoryid";
 
-// -------------------------------------------------------------------- //
-// Helper: extract criterion result from snapshot                        //
-// -------------------------------------------------------------------- //
-function get_criterion_value(array $breakdown, string $key): string {
+/**
+ * Yes/No text used in the CSV export.
+ *
+ * @param bool $value
+ * @return string
+ */
+function local_quizmetamonitor_csv_yesno(bool $value): string {
+    return get_string($value ? 'csv_yes' : 'csv_no', 'local_quizmetamonitor');
+}
+
+/**
+ * Extract one criterion result from a stored criteria snapshot, for the CSV export.
+ *
+ * @param array $breakdown Decoded criteria snapshot.
+ * @param string $key Criterion key.
+ * @return string
+ */
+function local_quizmetamonitor_get_criterion_value(array $breakdown, string $key): string {
     foreach ($breakdown as $item) {
         if ($item['key'] === $key) {
             // Choice-based criteria (SEB) always pass; report the option actually chosen.
             if (isset($item['choice'])) {
-                return $item['choice'] === 'no' ? 'No' : 'Yes';
+                return local_quizmetamonitor_csv_yesno($item['choice'] !== 'no');
             }
-            return $item['met'] ? 'Yes' : 'No';
+            return local_quizmetamonitor_csv_yesno((bool) $item['met']);
         }
     }
-    return 'N/A';
+    return get_string('csv_notapplicable', 'local_quizmetamonitor');
 }
 
-// -------------------------------------------------------------------- //
-// CSV download                                                          //
-// -------------------------------------------------------------------- //
+// CSV download.
 if ($format === 'csv' && empty($dateerror)) {
-
     $sql  = "SELECT $selectfields FROM $fromclause WHERE $where ORDER BY cc.name, c.fullname, q.name";
     $rows = $DB->get_records_sql($sql, $params);
 
@@ -157,31 +183,13 @@ if ($format === 'csv' && empty($dateerror)) {
     fputs($out, "\xEF\xBB\xBF");
 
     // Header row.
-    fputcsv($out, [
-        'Quiz Name',
-        'Course Name',
-        'Course Short Name',
-        'Category',
-        'Open Date',
-        'Close Date',
-        'Time Limit',
-        'Allowed Attempts',
-        'Password Set',
-        'IP Restriction',
-        'Shuffle Answers',
-        'Max Grade',
-        'Criterion: Open Date Set',
-        'Criterion: Close Date Set',
-        'Criterion: Attempts Limited',
-        'Criterion: Password Set',
-        'Criterion: IP Restriction Set',
-        'Criterion: Block Concurrent',
-        'Criterion: SEB Enabled',
-        'Security Score (%)',
-        'Threshold (%)',
-        'Below Threshold',
-        'Last Computed',
-    ]);
+    $headers = [
+        'quizname', 'coursename', 'courseshortname', 'category', 'opendate', 'closedate', 'timelimit',
+        'allowedattempts', 'passwordset', 'iprestriction', 'shuffleanswers', 'maxgrade',
+        'critopendate', 'critclosedate', 'critattempts', 'critpassword', 'critip', 'critblockconcurrent',
+        'critseb', 'score', 'threshold', 'belowthreshold', 'lastcomputed',
+    ];
+    fputcsv($out, array_map(fn($key) => get_string('csvheader_' . $key, 'local_quizmetamonitor'), $headers));
 
     foreach ($rows as $row) {
         $breakdown = json_decode($row->criteria_snapshot, true) ?? [];
@@ -191,24 +199,25 @@ if ($format === 'csv' && empty($dateerror)) {
             $row->course_name,
             $row->course_shortname,
             $row->category_name,
-            $row->open_date  ? userdate($row->open_date,  '%Y-%m-%d %H:%M') : '',
+            $row->open_date ? userdate($row->open_date, '%Y-%m-%d %H:%M') : '',
             $row->close_date ? userdate($row->close_date, '%Y-%m-%d %H:%M') : '',
-            $row->time_limit > 0 ? $row->time_limit . 's' : 'No limit',
-            $row->allowed_attempts == 0 ? 'Unlimited' : $row->allowed_attempts,
-            !empty($row->quiz_password)  ? 'Yes' : 'No',
-            !empty($row->ip_restriction) ? $row->ip_restriction : 'None',
-            $row->shuffle_answers ? 'Yes' : 'No',
+            $row->time_limit > 0 ? get_string('csv_seconds', 'local_quizmetamonitor', $row->time_limit)
+                : get_string('csv_nolimit', 'local_quizmetamonitor'),
+            $row->allowed_attempts == 0 ? get_string('csv_unlimited', 'local_quizmetamonitor') : $row->allowed_attempts,
+            local_quizmetamonitor_csv_yesno(!empty($row->quiz_password)),
+            !empty($row->ip_restriction) ? $row->ip_restriction : get_string('csv_none', 'local_quizmetamonitor'),
+            local_quizmetamonitor_csv_yesno((bool) $row->shuffle_answers),
             $row->max_grade,
-            get_criterion_value($breakdown, 'open_date_set'),
-            get_criterion_value($breakdown, 'close_date_set'),
-            get_criterion_value($breakdown, 'allowed_attempts_set'),
-            get_criterion_value($breakdown, 'password_set'),
-            get_criterion_value($breakdown, 'ip_restriction_set'),
-            get_criterion_value($breakdown, 'block_concurrent_set'),
-            get_criterion_value($breakdown, 'seb_enabled'),
-            number_format($row->score_percent,     2),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'open_date_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'close_date_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'allowed_attempts_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'password_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'ip_restriction_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'block_concurrent_set'),
+            local_quizmetamonitor_get_criterion_value($breakdown, 'seb_enabled'),
+            number_format($row->score_percent, 2),
             number_format($row->threshold_applied, 2),
-            $row->is_below_threshold ? 'Yes' : 'No',
+            local_quizmetamonitor_csv_yesno((bool) $row->is_below_threshold),
             userdate($row->last_computed, '%Y-%m-%d %H:%M'),
         ]);
     }
@@ -217,9 +226,7 @@ if ($format === 'csv' && empty($dateerror)) {
     exit;
 }
 
-// -------------------------------------------------------------------- //
-// Page view                                                             //
-// -------------------------------------------------------------------- //
+// Page view.
 $PAGE->set_url('/local/quizmetamonitor/pages/admin_export.php');
 $PAGE->set_context($systemcontext);
 $PAGE->set_title(get_string('exportreport', 'local_quizmetamonitor'));
@@ -229,19 +236,18 @@ $PAGE->set_pagelayout('admin');
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('exportreport', 'local_quizmetamonitor'));
 
-// -------------------------------------------------------------------- //
-// Filter form                                                           //
-// -------------------------------------------------------------------- //
+// Filter form.
 $categories    = core_course_category::make_categories_list();
 $statusoptions = [
-    ''      => get_string('allstatuses',    'local_quizmetamonitor'),
+    ''      => get_string('allstatuses', 'local_quizmetamonitor'),
     'below' => get_string('belowthreshold', 'local_quizmetamonitor'),
-    'ok'    => get_string('ok',             'local_quizmetamonitor'),
+    'ok'    => get_string('ok', 'local_quizmetamonitor'),
 ];
 
 echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
-echo html_writer::tag('h5',
+echo html_writer::tag(
+    'h5',
     get_string('exportfilters', 'local_quizmetamonitor'),
     ['class' => 'card-title']
 );
@@ -258,7 +264,7 @@ echo html_writer::start_tag('form', [
 
 echo html_writer::start_div('form-row');
 
-// ---- Category ---------------------------------------------------- //
+// Category.
 echo html_writer::start_div('col-md-3 form-group');
 echo html_writer::tag(
     'label',
@@ -274,7 +280,7 @@ echo html_writer::select(
 );
 echo html_writer::end_div();
 
-// ---- Status ------------------------------------------------------ //
+// Status.
 echo html_writer::start_div('col-md-2 form-group');
 echo html_writer::tag(
     'label',
@@ -290,7 +296,7 @@ echo html_writer::select(
 );
 echo html_writer::end_div();
 
-// ---- Date range header ------------------------------------------- //
+// Date range header.
 echo html_writer::start_div('col-md-4 form-group');
 echo html_writer::tag(
     'label',
@@ -319,7 +325,7 @@ echo html_writer::empty_tag('input', [
     'name'  => 'datefrom',
     'value' => $filterdatefrom,
     'class' => 'form-control form-control-sm',
-    'max'   => $filterdateto ?: '', // cannot pick from-date after to-date
+    'max'   => $filterdateto ?: '', // Cannot pick from-date after to-date.
 ]);
 echo html_writer::end_div();
 
@@ -343,14 +349,14 @@ echo html_writer::empty_tag('input', [
     'name'  => 'dateto',
     'value' => $filterdateto,
     'class' => 'form-control form-control-sm',
-    'min'   => $filterdatefrom ?: '', // cannot pick to-date before from-date
+    'min'   => $filterdatefrom ?: '', // Cannot pick to-date before from-date.
 ]);
 echo html_writer::end_div();
 
-echo html_writer::end_div(); // d-flex
-echo html_writer::end_div(); // col
+echo html_writer::end_div(); // D-flex.
+echo html_writer::end_div(); // Col.
 
-// ---- Buttons ----------------------------------------------------- //
+// Buttons.
 echo html_writer::start_div('col-md-3 form-group d-flex align-items-end flex-wrap');
 
 echo html_writer::empty_tag('input', [
@@ -367,14 +373,12 @@ echo html_writer::link(
 );
 
 echo html_writer::end_div();
-echo html_writer::end_div(); // form-row
+echo html_writer::end_div(); // Form-row.
 echo html_writer::end_tag('form');
-echo html_writer::end_div(); // card-body
-echo html_writer::end_div(); // card
+echo html_writer::end_div(); // Card-body.
+echo html_writer::end_div(); // Card.
 
-// -------------------------------------------------------------------- //
-// Active filter summary                                                 //
-// -------------------------------------------------------------------- //
+// Active filter summary.
 $activefilters = [];
 
 if ($filtercategory > 0) {
@@ -390,7 +394,7 @@ if ($filterstatus !== '') {
 
 if ($filterdatefrom !== '' || $filterdateto !== '') {
     $from = $filterdatefrom ?: get_string('anytime', 'local_quizmetamonitor');
-    $to   = $filterdateto   ?: get_string('anytime', 'local_quizmetamonitor');
+    $to   = $filterdateto ?: get_string('anytime', 'local_quizmetamonitor');
 
     $activefilters[] = get_string('quizstartdaterange', 'local_quizmetamonitor')
                      . ': <strong>' . $from . ' → ' . $to . '</strong>';
@@ -405,9 +409,7 @@ if (!empty($activefilters)) {
     );
 }
 
-// -------------------------------------------------------------------- //
-// Preview count                                                         //
-// -------------------------------------------------------------------- //
+// Preview count.
 $countsql   = "SELECT COUNT(*) FROM $fromclause WHERE $where";
 $totalcount = $DB->count_records_sql($countsql, $params);
 
@@ -452,14 +454,11 @@ if ($totalcount > 0 && empty($dateerror)) {
     );
 }
 
-echo html_writer::end_div(); // card-body
-echo html_writer::end_div(); // card
+echo html_writer::end_div(); // Card-body.
+echo html_writer::end_div(); // Card.
 
-// -------------------------------------------------------------------- //
-// Preview table — first 10 rows only                                   //
-// -------------------------------------------------------------------- //
+// Preview table — first 10 rows only.
 if ($totalcount > 0 && empty($dateerror)) {
-
     echo html_writer::tag(
         'h5',
         get_string('exportpreview', 'local_quizmetamonitor'),
@@ -469,22 +468,22 @@ if ($totalcount > 0 && empty($dateerror)) {
     $previewsql = "SELECT $selectfields
                      FROM $fromclause
                     WHERE $where
-                 ORDER BY cc.name, c.fullname, q.name
-                    LIMIT 10";
+                 ORDER BY cc.name, c.fullname, q.name";
 
-    $previewrows = $DB->get_records_sql($previewsql, $params);
+    // First 10 rows, limited through the DML API so it works on every supported database.
+    $previewrows = $DB->get_records_sql($previewsql, $params, 0, 10);
 
     $previewtbl              = new html_table();
     $previewtbl->attributes  = ['class' => 'generaltable table table-sm table-striped'];
     $previewtbl->head        = [
-        get_string('quizname',    'local_quizmetamonitor'),
+        get_string('quizname', 'local_quizmetamonitor'),
         get_string('course'),
         get_string('category'),
-        get_string('opendate',    'local_quizmetamonitor'),
-        get_string('closedate',   'local_quizmetamonitor'),
-        get_string('score',       'local_quizmetamonitor'),
-        get_string('threshold',   'local_quizmetamonitor'),
-        get_string('status',      'local_quizmetamonitor'),
+        get_string('opendate', 'local_quizmetamonitor'),
+        get_string('closedate', 'local_quizmetamonitor'),
+        get_string('score', 'local_quizmetamonitor'),
+        get_string('threshold', 'local_quizmetamonitor'),
+        get_string('status', 'local_quizmetamonitor'),
     ];
 
     foreach ($previewrows as $row) {
@@ -494,15 +493,21 @@ if ($totalcount > 0 && empty($dateerror)) {
             format_string($row->quiz_name),
             format_string($row->course_name),
             format_string($row->category_name),
-            $row->open_date  ? userdate($row->open_date,  get_string('strftimedateshort', 'langconfig')) : '—',
+            $row->open_date ? userdate($row->open_date, get_string('strftimedateshort', 'langconfig')) : '—',
             $row->close_date ? userdate($row->close_date, get_string('strftimedateshort', 'langconfig')) : '—',
             number_format($row->score_percent, 1) . '%',
             number_format($row->threshold_applied, 1) . '%',
             $isbelow
-                ? html_writer::tag('span', get_string('belowthreshold', 'local_quizmetamonitor'),
-                    ['class' => 'badge badge-danger'])
-                : html_writer::tag('span', get_string('ok', 'local_quizmetamonitor'),
-                    ['class' => 'badge badge-success']),
+                ? html_writer::tag(
+                    'span',
+                    get_string('belowthreshold', 'local_quizmetamonitor'),
+                    ['class' => 'badge badge-danger']
+                )
+                : html_writer::tag(
+                    'span',
+                    get_string('ok', 'local_quizmetamonitor'),
+                    ['class' => 'badge badge-success']
+                ),
         ];
     }
 
@@ -511,8 +516,11 @@ if ($totalcount > 0 && empty($dateerror)) {
     if ($totalcount > 10) {
         echo html_writer::tag(
             'p',
-            get_string('exportpreviewlimited', 'local_quizmetamonitor',
-                ['shown' => 10, 'total' => $totalcount]),
+            get_string(
+                'exportpreviewlimited',
+                'local_quizmetamonitor',
+                ['shown' => 10, 'total' => $totalcount]
+            ),
             ['class' => 'text-muted small']
         );
     }

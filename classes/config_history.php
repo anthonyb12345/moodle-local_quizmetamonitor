@@ -1,16 +1,38 @@
 <?php
-namespace local_quizmetamonitor;
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+namespace local_quizmetamonitor;
 
 /**
  * Handles saving and retrieving configuration change history
  * for both scoring criteria and threshold changes.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class config_history {
-
-    const TYPE_CRITERIA  = 'criteria';
-    const TYPE_THRESHOLD = 'threshold';
+    /**
+     * @var string Change type for scoring criteria changes.
+     */
+    public const TYPE_CRITERIA  = 'criteria';
+    /**
+     * @var string Change type for threshold changes.
+     */
+    public const TYPE_THRESHOLD = 'threshold';
 
     /**
      * Save a history record when criteria or threshold changes.
@@ -58,7 +80,7 @@ class config_history {
 
         $conditions = ['change_type' => $type];
 
-        // categoryid can be null (site default) — handle separately.
+        // Categoryid can be null (site default) — handle separately.
         if ($categoryid === null) {
             $sql = "SELECT ch.*, u.firstname, u.lastname,
                            u.firstnamephonetic, u.lastnamephonetic,
@@ -108,16 +130,16 @@ class config_history {
         if ($type === self::TYPE_CRITERIA) {
             $table->head = [
                 get_string('date'),
-                get_string('changedby',       'local_quizmetamonitor'),
-                get_string('changereason',    'local_quizmetamonitor'),
-                get_string('newcriteria',     'local_quizmetamonitor'),
+                get_string('changedby', 'local_quizmetamonitor'),
+                get_string('changereason', 'local_quizmetamonitor'),
+                get_string('newcriteria', 'local_quizmetamonitor'),
             ];
         } else {
             $table->head = [
                 get_string('date'),
-                get_string('changedby',       'local_quizmetamonitor'),
-                get_string('changereason',    'local_quizmetamonitor'),
-                get_string('newthreshold',    'local_quizmetamonitor'),
+                get_string('changedby', 'local_quizmetamonitor'),
+                get_string('changereason', 'local_quizmetamonitor'),
+                get_string('newthreshold', 'local_quizmetamonitor'),
             ];
         }
 
@@ -145,10 +167,14 @@ class config_history {
         return \html_writer::table($table);
     }
 
-    // ---------------------------------------------------------------- //
-    // Private snapshot renderers                                        //
-    // ---------------------------------------------------------------- //
+    // Private snapshot renderers.
 
+    /**
+     * Render a criteria snapshot as HTML for the history table.
+     *
+     * @param array $snapshot Decoded criteria snapshot.
+     * @return string
+     */
     private static function render_criteria_snapshot(array $snapshot): string {
         if (empty($snapshot)) {
             return '—';
@@ -174,6 +200,12 @@ class config_history {
         return implode('', $items);
     }
 
+    /**
+     * Render a threshold snapshot as HTML for the history table.
+     *
+     * @param array $snapshot Decoded threshold snapshot.
+     * @return string
+     */
     private static function render_threshold_snapshot(array $snapshot): string {
         if (!isset($snapshot['threshold_percent'])) {
             return '—';

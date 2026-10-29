@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Admin page: edit the email templates.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -15,18 +38,18 @@ $PAGE->set_pagelayout('admin');
 
 $templatekeys = [
     \local_quizmetamonitor\notification_manager::TYPE_TEACHER_CREATED
-        => get_string('template_teacher_created',    'local_quizmetamonitor'),
+        => get_string('template_teacher_created', 'local_quizmetamonitor'),
     \local_quizmetamonitor\notification_manager::TYPE_TEACHER_SCORE_CHANGED
         => get_string('template_teacher_scorechanged', 'local_quizmetamonitor'),
     \local_quizmetamonitor\notification_manager::TYPE_EXAMMONITOR_ALERT
-        => get_string('template_exammonitor_alert',   'local_quizmetamonitor'),
+        => get_string('template_exammonitor_alert', 'local_quizmetamonitor'),
     \local_quizmetamonitor\notification_manager::TYPE_TEACHER_RESTORED
-        => get_string('template_teacher_restored',    'local_quizmetamonitor'),
+        => get_string('template_teacher_restored', 'local_quizmetamonitor'),
     \local_quizmetamonitor\notification_manager::TYPE_TEACHER_ALERT
-        => get_string('template_teacher_alert',       'local_quizmetamonitor'),
+        => get_string('template_teacher_alert', 'local_quizmetamonitor'),
 ];
 
-// ---- Handle save --------------------------------------------------- //
+// Handle save.
 if (data_submitted() && confirm_sesskey()) {
     $now = time();
     foreach ($templatekeys as $key => $label) {
@@ -60,7 +83,7 @@ if (data_submitted() && confirm_sesskey()) {
     );
 }
 
-// ---- Render -------------------------------------------------------- //
+// Render.
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('emailtemplates', 'local_quizmetamonitor'));
 
@@ -79,8 +102,11 @@ foreach ($templatekeys as $key => $label) {
 
     // Subject.
     echo html_writer::start_div('form-group');
-    echo html_writer::tag('label', get_string('subject', 'local_quizmetamonitor'),
-        ['for' => 'subj_' . $key]);
+    echo html_writer::tag(
+        'label',
+        get_string('subject', 'local_quizmetamonitor'),
+        ['for' => 'subj_' . $key]
+    );
     echo html_writer::empty_tag('input', [
         'type'  => 'text',
         'id'    => 'subj_' . $key,
@@ -92,9 +118,13 @@ foreach ($templatekeys as $key => $label) {
 
     // HTML body.
     echo html_writer::start_div('form-group');
-    echo html_writer::tag('label', get_string('bodyhtml', 'local_quizmetamonitor'),
-        ['for' => 'html_' . $key]);
-    echo html_writer::tag('textarea',
+    echo html_writer::tag(
+        'label',
+        get_string('bodyhtml', 'local_quizmetamonitor'),
+        ['for' => 'html_' . $key]
+    );
+    echo html_writer::tag(
+        'textarea',
         htmlspecialchars($existing->body_html ?? '', ENT_QUOTES),
         [
             'id'    => 'html_' . $key,
@@ -107,9 +137,13 @@ foreach ($templatekeys as $key => $label) {
 
     // Plain body.
     echo html_writer::start_div('form-group');
-    echo html_writer::tag('label', get_string('bodyplain', 'local_quizmetamonitor'),
-        ['for' => 'plain_' . $key]);
-    echo html_writer::tag('textarea',
+    echo html_writer::tag(
+        'label',
+        get_string('bodyplain', 'local_quizmetamonitor'),
+        ['for' => 'plain_' . $key]
+    );
+    echo html_writer::tag(
+        'textarea',
         htmlspecialchars($existing->body_plain ?? '', ENT_QUOTES),
         [
             'id'    => 'plain_' . $key,

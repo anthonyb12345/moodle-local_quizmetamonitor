@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace local_quizmetamonitor;
 
 defined('MOODLE_INTERNAL') || die();
@@ -7,21 +22,25 @@ defined('MOODLE_INTERNAL') || die();
  * Tests for the block_concurrent_set criterion, backed by quizaccess_onesession
  * ("Block concurrent sessions" quiz access rule).
  *
- * The site's quizaccess_onesession is customised to always enforce the rule: every
- * saved quiz gets it enabled regardless of the submitted form value. Quizzes are
- * created and edited through the normal course module APIs so the access rule saves
- * its own setting and the plugin observers score the quiz.
+ * Quizzes are created through the normal course module APIs so the access rule saves its
+ * own setting and the plugin observers score the quiz. The tests only rely on what this
+ * plugin reads (a quizaccess_onesession row with enabled = 1), so they pass with the
+ * standard access rule as well as with sites that customise it to be always on.
  *
  * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(scoring_engine::class)]
 final class scoring_engine_test extends \advanced_testcase {
-
     /** @var \stdClass */
     private $course;
     /** @var \stdClass */
     private $teacher;
 
+    /**
+     * Set up the course, users and environment used by the tests.
+     */
     protected function setUp(): void {
         global $PAGE;
         parent::setUp();
@@ -39,6 +58,12 @@ final class scoring_engine_test extends \advanced_testcase {
         $this->setUser($this->teacher);
     }
 
+    /**
+     * Create a quiz in the test course, setting "Block concurrent sessions".
+     *
+     * @param bool $onesession Submitted value of the setting.
+     * @return \stdClass
+     */
     private function create_quiz(bool $onesession): \stdClass {
         return $this->getDataGenerator()->create_module('quiz', [
             'course'            => $this->course->id,
@@ -47,24 +72,28 @@ final class scoring_engine_test extends \advanced_testcase {
     }
 
     /**
-     * Save the quiz settings form the way mod/quiz does, submitting "Block concurrent sessions".
+     * Store the "Block concurrent sessions" setting directly and fire course_module_updated,
+     * as saving the quiz settings form does.
+     *
+     * @param \stdClass $quiz Quiz record.
+     * @param bool $enabled Whether the setting is on.
      */
-    private function edit_quiz(\stdClass $quiz, bool $onesession): void {
-        global $CFG;
-        require_once($CFG->dirroot . '/course/modlib.php');
+    private function save_setting(\stdClass $quiz, bool $enabled): void {
+        global $DB;
 
-        [$cm, $context, $module, $data] = get_moduleinfo_data(
-            get_coursemodule_from_id('quiz', $quiz->cmid, 0, false, MUST_EXIST),
-            $this->course
-        );
-        $data->onesessionenabled = $onesession ? 1 : 0;
-        $data->quizpassword      = $data->password ?? '';
-
-        update_moduleinfo($cm, $data, $this->course);
+        $DB->delete_records('quizaccess_onesession', ['quizid' => $quiz->id]);
+        if ($enabled) {
+            $DB->insert_record('quizaccess_onesession', ['quizid' => $quiz->id, 'enabled' => 1]);
+        }
+        $cm = get_coursemodule_from_instance('quiz', $quiz->id, $this->course->id, false, MUST_EXIST);
+        \core\event\course_module_updated::create_from_cm($cm)->trigger();
     }
 
     /**
      * Read block_concurrent_set from the score the observers stored for the quiz.
+     *
+     * @param int $quizid Quiz ID.
+     * @return bool
      */
     private function stored_block_concurrent_met(int $quizid): bool {
         global $DB;
@@ -78,6 +107,9 @@ final class scoring_engine_test extends \advanced_testcase {
         $this->fail('block_concurrent_set missing from stored breakdown');
     }
 
+    /**
+     * Quiz created has block concurrent scored.
+     */
     public function test_quiz_created_has_block_concurrent_scored(): void {
         global $DB;
 
@@ -87,29 +119,50 @@ final class scoring_engine_test extends \advanced_testcase {
         $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
     }
 
-    public function test_quiz_created_with_it_off_is_still_enforced_and_scored(): void {
-        global $DB;
-
-        $quiz = $this->create_quiz(false);
-
-        $this->assertTrue($DB->record_exists('quizaccess_onesession', ['quizid' => $quiz->id, 'enabled' => 1]));
-        $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
-    }
-
-    public function test_edit_cannot_switch_it_off(): void {
+    /**
+     * A disabled setting is scored as not met.
+     */
+    public function test_disabled_setting_is_not_scored(): void {
         $quiz = $this->create_quiz(true);
 
-        $this->edit_quiz($quiz, false);
+        $this->save_setting($quiz, false);
 
-        $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
+        $this->assertFalse($this->stored_block_concurrent_met((int) $quiz->id));
     }
 
+    /**
+     * Switching the setting on rescores the quiz and emails the change to the editor.
+     */
+    public function test_switching_it_on_is_scored_and_emailed(): void {
+        $quiz = $this->create_quiz(true);
+        $this->save_setting($quiz, false);
+
+        $sink = $this->redirectEmails();
+        $this->save_setting($quiz, true);
+
+        $this->assertTrue($this->stored_block_concurrent_met((int) $quiz->id));
+        $ours = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => str_starts_with($m->subject, 'Quiz security settings updated:')
+        ));
+        $this->assertCount(1, $ours);
+        $this->assertStringContainsString(
+            'Block Concurrent Connections set: [FAIL] → [PASS]',
+            quoted_printable_decode($ours[0]->body)
+        );
+    }
+
+    /**
+     * Creation email shows block concurrent pass.
+     */
     public function test_creation_email_shows_block_concurrent_pass(): void {
         $sink = $this->redirectEmails();
         $this->create_quiz(true);
 
-        $ours = array_values(array_filter($sink->get_messages(),
-            fn($m) => str_starts_with($m->subject, 'New quiz created:')));
+        $ours = array_values(array_filter(
+            $sink->get_messages(),
+            fn($m) => str_starts_with($m->subject, 'New quiz created:')
+        ));
         $this->assertCount(1, $ours);
         $this->assertSame($this->teacher->email, $ours[0]->to);
         $this->assertMatchesRegularExpression(
@@ -118,10 +171,13 @@ final class scoring_engine_test extends \advanced_testcase {
         );
     }
 
+    /**
+     * Quiz without onesession row is not scored.
+     */
     public function test_quiz_without_onesession_row_is_not_scored(): void {
         global $DB;
 
-        // e.g. a quiz created before quizaccess_onesession was installed.
+        // E.g. a quiz created before quizaccess_onesession was installed.
         $quiz = $this->create_quiz(true);
         $DB->delete_records('quizaccess_onesession', ['quizid' => $quiz->id]);
 

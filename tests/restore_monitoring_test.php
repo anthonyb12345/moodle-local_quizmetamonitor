@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace local_quizmetamonitor;
 
 defined('MOODLE_INTERNAL') || die();
@@ -13,11 +28,12 @@ require_once($CFG->dirroot . '/local/quizmetamonitor/db/upgradelib.php');
  * The plugin must still score those quizzes and send the restoring teacher one summary email.
  *
  * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(event\observer::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(notification_manager::class)]
 final class restore_monitoring_test extends \advanced_testcase {
-
     /** @var \stdClass Source course. */
     private $source;
     /** @var \stdClass Target course. */
@@ -25,6 +41,9 @@ final class restore_monitoring_test extends \advanced_testcase {
     /** @var \stdClass Editing teacher in both courses. */
     private $teacher;
 
+    /**
+     * Set up the course, users and environment used by the tests.
+     */
     protected function setUp(): void {
         global $PAGE;
         parent::setUp();
@@ -43,16 +62,30 @@ final class restore_monitoring_test extends \advanced_testcase {
 
     /**
      * Import the source course's content into the target course as $userid (Course > Import).
+     *
+     * @param int $userid User ID.
      */
     private function import_source_into_target(int $userid): void {
-        $bc = new \backup_controller(\backup::TYPE_1COURSE, $this->source->id, \backup::FORMAT_MOODLE,
-            \backup::INTERACTIVE_NO, \backup::MODE_IMPORT, $userid);
+        $bc = new \backup_controller(
+            \backup::TYPE_1COURSE,
+            $this->source->id,
+            \backup::FORMAT_MOODLE,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_IMPORT,
+            $userid
+        );
         $backupid = $bc->get_backupid();
         $bc->execute_plan();
         $bc->destroy();
 
-        $rc = new \restore_controller($backupid, $this->target->id, \backup::INTERACTIVE_NO,
-            \backup::MODE_IMPORT, $userid, \backup::TARGET_CURRENT_ADDING);
+        $rc = new \restore_controller(
+            $backupid,
+            $this->target->id,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_IMPORT,
+            $userid,
+            \backup::TARGET_CURRENT_ADDING
+        );
         $rc->execute_precheck();
         $rc->execute_plan();
         $rc->destroy();
@@ -64,35 +97,57 @@ final class restore_monitoring_test extends \advanced_testcase {
      *
      * @param string $type backup::TYPE_1ACTIVITY or backup::TYPE_1SECTION
      * @param int $id course module id or section id
+     * @param int $userid User ID.
      */
     private function backup_file_and_restore_into_target(string $type, int $id, int $userid): void {
         global $CFG;
 
-        $bc = new \backup_controller($type, $id, \backup::FORMAT_MOODLE, \backup::INTERACTIVE_NO,
-            \backup::MODE_GENERAL, $userid);
+        $bc = new \backup_controller(
+            $type,
+            $id,
+            \backup::FORMAT_MOODLE,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_GENERAL,
+            $userid
+        );
         $bc->execute_plan();
         $file = $bc->get_results()['backup_destination'];
         $bc->destroy();
 
         // Unpack the .mbz the way the Restore page does after an upload.
         $folder = 'quizmetamonitor_' . random_string(8);
-        $file->extract_to_pathname(get_file_packer('application/vnd.moodle.backup'),
-            $CFG->tempdir . '/backup/' . $folder);
+        $file->extract_to_pathname(
+            get_file_packer('application/vnd.moodle.backup'),
+            $CFG->tempdir . '/backup/' . $folder
+        );
 
-        $rc = new \restore_controller($folder, $this->target->id, \backup::INTERACTIVE_NO,
-            \backup::MODE_GENERAL, $userid, \backup::TARGET_CURRENT_ADDING);
+        $rc = new \restore_controller(
+            $folder,
+            $this->target->id,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_GENERAL,
+            $userid,
+            \backup::TARGET_CURRENT_ADDING
+        );
         $rc->execute_precheck();
         $rc->execute_plan();
         $rc->destroy();
     }
 
     /**
+     * Captured emails whose subject starts with a prefix.
+     *
+     * @param \phpunit_phpmailer_sink $sink Email sink.
+     * @param string $prefix Subject prefix.
      * @return \stdClass[] Captured emails whose subject starts with $prefix.
      */
     private function emails_starting_with($sink, string $prefix): array {
         return array_values(array_filter($sink->get_messages(), fn($m) => str_starts_with($m->subject, $prefix)));
     }
 
+    /**
+     * Import scores restored quizzes and emails each quiz.
+     */
     public function test_import_scores_restored_quizzes_and_emails_each_quiz(): void {
         global $DB;
 
@@ -114,8 +169,10 @@ final class restore_monitoring_test extends \advanced_testcase {
         }
         $restored = array_filter($targetquizzes, fn($q) => $q->id != $existing->id);
         foreach ($restored as $quiz) {
-            $this->assertTrue($DB->record_exists('local_quizmeta_score_history',
-                ['quizid' => $quiz->id, 'changed_by_userid' => $this->teacher->id]));
+            $this->assertTrue($DB->record_exists(
+                'local_quizmeta_score_history',
+                ['quizid' => $quiz->id, 'changed_by_userid' => $this->teacher->id]
+            ));
         }
 
         // One email per restored quiz (not for the quiz that was already there).
@@ -132,35 +189,52 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->assertCount(0, $this->emails_starting_with($sink, 'New quiz created:'));
     }
 
+    /**
+     * Single quiz backup restored is scored and emailed.
+     */
     public function test_single_quiz_backup_restored_is_scored_and_emailed(): void {
         global $DB;
 
         $this->setUser($this->teacher);
-        $quiz = $this->getDataGenerator()->create_module('quiz', ['course' => $this->source->id, 'name' => 'Quiz from server A']);
+        $onesession = (bool) \core_component::get_component_directory('quizaccess_onesession');
+        $quiz = $this->getDataGenerator()->create_module('quiz', [
+            'course' => $this->source->id,
+            'name' => 'Quiz from server A',
+            'onesessionenabled' => 1,
+        ]);
 
         $sink = $this->redirectEmails();
         $this->backup_file_and_restore_into_target(\backup::TYPE_1ACTIVITY, (int) $quiz->cmid, (int) $this->teacher->id);
 
         $restored = $DB->get_record('quiz', ['course' => $this->target->id], '*', MUST_EXIST);
         $this->assertTrue($DB->record_exists('local_quizmeta_quiz_score', ['quizid' => $restored->id]));
-        $this->assertTrue($DB->record_exists('local_quizmeta_score_history',
-            ['quizid' => $restored->id, 'changed_by_userid' => $this->teacher->id]));
+        $this->assertTrue($DB->record_exists(
+            'local_quizmeta_score_history',
+            ['quizid' => $restored->id, 'changed_by_userid' => $this->teacher->id]
+        ));
 
         $emails = $this->emails_starting_with($sink, 'Restored quiz:');
         $this->assertCount(1, $emails);
         $this->assertSame('Restored quiz: Quiz from server A', $emails[0]->subject);
         $this->assert_restored_email_has_table($emails[0]);
-        $this->assertStringContainsString('has been restored or imported into the course',
-            quoted_printable_decode($emails[0]->body));
-        // The Block concurrent setting travels in the backup, so it is already set when scored.
-        $this->assertTrue($DB->record_exists('quizaccess_onesession', ['quizid' => $restored->id, 'enabled' => 1]));
-        $this->assertMatchesRegularExpression(
-            '~Block Concurrent Connections set</td>\s*<td[^>]*><span[^>]*>PASS<~',
+        $this->assertStringContainsString(
+            'has been restored or imported into the course',
             quoted_printable_decode($emails[0]->body)
         );
+        // The Block concurrent setting travels in the backup, so it is already set when scored.
+        if ($onesession) {
+            $this->assertTrue($DB->record_exists('quizaccess_onesession', ['quizid' => $restored->id, 'enabled' => 1]));
+            $this->assertMatchesRegularExpression(
+                '~Block Concurrent Connections set</td>\s*<td[^>]*><span[^>]*>PASS<~',
+                quoted_printable_decode($emails[0]->body)
+            );
+        }
         $this->assertCount(0, $this->emails_starting_with($sink, 'New quiz created:'));
     }
 
+    /**
+     * Section backup restored sends one email per quiz.
+     */
     public function test_section_backup_restored_sends_one_email_per_quiz(): void {
         global $DB;
 
@@ -183,6 +257,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         }
     }
 
+    /**
+     * Duplicate sends only the created email.
+     */
     public function test_duplicate_sends_only_the_created_email(): void {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -199,6 +276,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->assertCount(0, $this->emails_starting_with($sink, 'Restored quiz:'));
     }
 
+    /**
+     * Restore by non teacher scores but sends no email.
+     */
     public function test_restore_by_non_teacher_scores_but_sends_no_email(): void {
         global $DB;
 
@@ -227,6 +307,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->assertCount(0, $this->emails_starting_with($sink, 'Restored quiz:'));
     }
 
+    /**
+     * Upgrade switches summary template to per quiz.
+     */
     public function test_upgrade_switches_summary_template_to_per_quiz(): void {
         global $DB;
 
@@ -250,14 +333,24 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->assertStringNotContainsString('{quiz_list}', $updated->body_plain);
 
         // An admin-customised template is left alone.
-        $DB->set_field('local_quizmeta_email_tmpl', 'subject', 'Our own: {quiz_name}', ['template_key' => 'teacher_quizzes_restored']);
+        $DB->set_field(
+            'local_quizmeta_email_tmpl',
+            'subject',
+            'Our own: {quiz_name}',
+            ['template_key' => 'teacher_quizzes_restored']
+        );
         $this->assertFalse(local_quizmetamonitor_update_restored_template());
-        $this->assertSame('Our own: {quiz_name}', $DB->get_field('local_quizmeta_email_tmpl', 'subject',
-            ['template_key' => 'teacher_quizzes_restored']));
+        $this->assertSame('Our own: {quiz_name}', $DB->get_field(
+            'local_quizmeta_email_tmpl',
+            'subject',
+            ['template_key' => 'teacher_quizzes_restored']
+        ));
     }
 
     /**
      * The restored-quiz email goes to the teacher and has the same criteria table as "quiz created".
+     *
+     * @param \stdClass $email Captured email.
      */
     private function assert_restored_email_has_table(\stdClass $email): void {
         $this->assertSame($this->teacher->email, $email->to);
@@ -268,6 +361,9 @@ final class restore_monitoring_test extends \advanced_testcase {
         $this->assertStringContainsString('Safe Exam Browser - ', $body);
     }
 
+    /**
+     * Restored template is added once.
+     */
     public function test_restored_template_is_added_once(): void {
         global $DB;
 

@@ -1,12 +1,34 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace local_quizmetamonitor;
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Helpers to look up course categories, Exam Monitors and teachers.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class category_util {
-
     /**
      * Return the course-category id for a given course.
+     *
+     * @param int $courseid Course ID.
+     * @return int
      */
     public static function get_categoryid_for_course(int $courseid): int {
         global $DB;
@@ -15,6 +37,8 @@ class category_util {
 
     /**
      * Return every category id that $userid is assigned to as Exam Monitor.
+     *
+     * @param int $userid User ID.
      * @return int[]
      */
     public static function get_categories_for_monitor(int $userid): array {
@@ -30,6 +54,10 @@ class category_util {
 
     /**
      * True if $userid is an Exam Monitor for $categoryid.
+     *
+     * @param int $userid User ID.
+     * @param int $categoryid Course category ID.
+     * @return bool
      */
     public static function is_monitor_for_category(int $userid, int $categoryid): bool {
         global $DB;
@@ -41,6 +69,8 @@ class category_util {
 
     /**
      * Return all user ids who are Exam Monitors for $categoryid.
+     *
+     * @param int $categoryid Course category ID.
      * @return int[]
      */
     public static function get_monitors_for_category(int $categoryid): array {
@@ -54,10 +84,10 @@ class category_util {
         return array_map('intval', $rows);
     }
 
-   
     /**
      * Return all user ids of teachers and editing teachers enrolled in a course.
      *
+     * @param int $courseid Course ID.
      * @return int[]
      */
     public static function get_teachers_for_course(int $courseid): array {
@@ -76,13 +106,13 @@ class category_util {
             return [];
         }
 
-        list($rolesql, $roleparams) = $DB->get_in_or_equal($teacheroleids, SQL_PARAMS_NAMED, 'role');
+        [$rolesql, $roleparams] = $DB->get_in_or_equal($teacheroleids, SQL_PARAMS_NAMED, 'role');
 
         // FIX: get_parent_context_ids(true) already returns context ids as VALUES.
         // Do NOT call array_keys() on it.
-        $contextids = $context->get_parent_context_ids(true); // includes the course context itself
+        $contextids = $context->get_parent_context_ids(true); // Includes the course context itself.
 
-        list($ctxsql, $ctxparams) = $DB->get_in_or_equal($contextids, SQL_PARAMS_NAMED, 'ctx');
+        [$ctxsql, $ctxparams] = $DB->get_in_or_equal($contextids, SQL_PARAMS_NAMED, 'ctx');
 
         $sql = "SELECT DISTINCT ra.userid
                 FROM {role_assignments} ra
@@ -99,6 +129,8 @@ class category_util {
     }
     /**
      * Return all course ids that are direct children of a category.
+     *
+     * @param int $categoryid Course category ID.
      * @return int[]
      */
     public static function get_course_ids_in_category(int $categoryid): array {

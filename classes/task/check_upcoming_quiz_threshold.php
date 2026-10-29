@@ -1,7 +1,20 @@
 <?php
-namespace local_quizmetamonitor\task;
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+namespace local_quizmetamonitor\task;
 
 use local_quizmetamonitor\notification_manager;
 
@@ -11,13 +24,24 @@ use local_quizmetamonitor\notification_manager;
  *   - starts within the next 24 hours
  *   - is currently below its applicable threshold
  *   - has not yet had an alert sent in this run window
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class check_upcoming_quiz_threshold extends \core\task\scheduled_task {
-
+    /**
+     * Name of the task shown in the admin interface.
+     *
+     * @return string
+     */
     public function get_name(): string {
         return get_string('task_check_threshold', 'local_quizmetamonitor');
     }
 
+    /**
+     * Send the below-threshold alerts for quizzes that open within the next 24 hours.
+     */
     public function execute(): void {
         global $DB;
 
@@ -39,8 +63,8 @@ class check_upcoming_quiz_threshold extends \core\task\scheduled_task {
         $records = $DB->get_recordset_sql($sql, ['now' => $now, 'in24h' => $in24h]);
 
         foreach ($records as $rec) {
-            $quiz = $DB->get_record('quiz',             ['id' => $rec->quizid],    '*', IGNORE_MISSING);
-            $course = $DB->get_record('course',         ['id' => $rec->courseid],  '*', IGNORE_MISSING);
+            $quiz = $DB->get_record('quiz', ['id' => $rec->quizid], '*', IGNORE_MISSING);
+            $course = $DB->get_record('course', ['id' => $rec->courseid], '*', IGNORE_MISSING);
             $category = $DB->get_record('course_categories', ['id' => $rec->categoryid], '*', IGNORE_MISSING);
 
             if (!$quiz || !$course) {
