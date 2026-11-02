@@ -28,7 +28,7 @@ use local_quizmetamonitor\scoring_engine;
  * included, as a safety net for anything the event observers missed.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class resync_quiz_scores extends \core\task\scheduled_task {

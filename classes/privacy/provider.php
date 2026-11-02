@@ -41,7 +41,7 @@ use core_privacy\local\request\writer;
  * tables the user ID is replaced by 0 (system) so scores and the configuration audit trail remain.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements

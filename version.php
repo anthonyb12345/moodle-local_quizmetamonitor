@@ -18,7 +18,7 @@
  * Version information for local_quizmetamonitor.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -29,3 +29,12 @@ $plugin->version   = 2026102900;
 $plugin->requires  = 2025041400; // Moodle 5.0.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.0.0';
+
+// Center for Digital Innovation and Artificial Intelligence (CINIA).
+$plugin->copyright = '2026 Center for Digital Innovation and Artificial Intelligence (CINIA) | https://usj.edu.lb/cinia/';
+
+// Governance and Development Leadership.
+$plugin->collaborators = [
+    'Anthony Bassil', // Email: anthony.bassil5@usj.edu.lb. Position: AI Engineer.
+    'Mario Gharib', // Email: mario.gharib@usj.edu.lb. Position: Team leader (architecture and implementation).
+];

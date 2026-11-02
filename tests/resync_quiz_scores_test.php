@@ -24,7 +24,7 @@ use local_quizmetamonitor\task\resync_quiz_scores;
  * Checks the nightly resync skips quizzes created before the plugin was installed.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(resync_quiz_scores::class)]

@@ -18,7 +18,7 @@
  * Upgrade helpers for local_quizmetamonitor: default email templates and the steps that add or update them.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

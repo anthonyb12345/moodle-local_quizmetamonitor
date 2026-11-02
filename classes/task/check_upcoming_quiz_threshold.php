@@ -26,7 +26,7 @@ use local_quizmetamonitor\notification_manager;
  *   - has not yet had an alert sent in this run window
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class check_upcoming_quiz_threshold extends \core\task\scheduled_task {

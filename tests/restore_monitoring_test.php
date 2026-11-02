@@ -28,7 +28,7 @@ require_once($CFG->dirroot . '/local/quizmetamonitor/db/upgradelib.php');
  * The plugin must still score those quizzes and send the restoring teacher one summary email.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(event\observer::class)]

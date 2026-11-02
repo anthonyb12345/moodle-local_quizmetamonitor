@@ -26,7 +26,7 @@ require_once($CFG->dirroot . '/local/quizmetamonitor/db/upgradelib.php');
  * even if the score stays the same, and the template reads correctly in both cases.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(notification_manager::class)]

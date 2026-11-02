@@ -24,7 +24,7 @@ use local_quizmetamonitor\task\check_upcoming_quiz_threshold;
  * Below-threshold alert (quiz opens within 24 hours) to the users who created or edited the quiz.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(check_upcoming_quiz_threshold::class)]

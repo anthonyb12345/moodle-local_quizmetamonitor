@@ -20,7 +20,7 @@ namespace local_quizmetamonitor;
  * Resolves criteria + threshold and computes the security score for a quiz.
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class scoring_engine {

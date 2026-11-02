@@ -20,7 +20,7 @@ namespace local_quizmetamonitor;
  * Builds and sends the plugin's notification emails (teacher emails and below-threshold alerts).
  *
  * @package    local_quizmetamonitor
- * @copyright  2026 Anthony Bassil <anthonybassil101@gmail.com>
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
  * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class notification_manager {
