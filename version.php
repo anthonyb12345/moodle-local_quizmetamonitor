@@ -29,6 +29,9 @@ $plugin->version   = 2026102900;
 $plugin->requires  = 2025041400; // Moodle 5.0.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.0.0';
+$plugin->dependencies = [
+    'quizaccess_onesession' => 2024032400, // Block concurrent sessions 2.0.1, for the "Block concurrent connections" criterion.
+];
 
 // Center for Digital Innovation and Artificial Intelligence (CINIA).
 $plugin->copyright = '2026 Center for Digital Innovation and Artificial Intelligence (CINIA) | https://usj.edu.lb/cinia/';

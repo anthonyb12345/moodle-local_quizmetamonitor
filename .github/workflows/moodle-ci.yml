@@ -60,10 +60,9 @@ jobs:
           sudo locale-gen en_AU.UTF-8
           echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
 
-      # Optional: also test the "Block concurrent sessions" integration (quizaccess_onesession).
-      # Without it, the tests that need it are skipped.
-      # - name: Add quizaccess_onesession
-      #   run: moodle-plugin-ci add-plugin vadimonus/moodle-quizaccess_onesession
+      # Required dependency (see version.php): the "Block concurrent sessions" quiz access rule.
+      - name: Add quizaccess_onesession
+        run: moodle-plugin-ci add-plugin vadimonus/moodle-quizaccess_onesession
 
       - name: Install moodle-plugin-ci
         run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1

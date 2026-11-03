@@ -53,7 +53,7 @@ Each criterion can be enabled or disabled and given its own points. The default 
 - Allowed attempts limited
 - Password set
 - Restriction by IP address set
-- Block concurrent connections set (needs the [Block concurrent sessions](https://moodle.org/plugins/quizaccess_onesession) quiz access rule)
+- Block concurrent connections set (from the [Block concurrent sessions](https://moodle.org/plugins/quizaccess_onesession) quiz access rule)
 - Safe Exam Browser: always full points; the email shows which option the teacher chose
 
 The score is the percentage of points earned. The default threshold is 70%.
@@ -107,15 +107,22 @@ Exam Monitors
 
 ## Installation
 
-1. Place the plugin in: **/local/quizmetamonitor** (**/public/local/quizmetamonitor** on Moodle 5.1 and later), or install the ZIP from **Site administration → Plugins → Install plugins**
+Requirements:
 
-2. Log in as administrator
+- Moodle 5.0 or later
+- The [Block concurrent sessions](https://moodle.org/plugins/quizaccess_onesession) quiz access rule (`quizaccess_onesession`). Moodle will not install this plugin until it is installed.
 
-3. Navigate to: **Site administration → Notifications**
+1. Install **Block concurrent sessions** if it is not installed yet
 
-4. Complete the installation process
+2. Place the plugin in: **/local/quizmetamonitor** (**/public/local/quizmetamonitor** on Moodle 5.1 and later), or install the ZIP from **Site administration → Plugins → Install plugins**
 
-5. Optionally score the quizzes that existed before the installation: **Site administration → Plugins → Local plugins → Quiz Metadata Monitor → Backfill existing quizzes**
+3. Log in as administrator
+
+4. Navigate to: **Site administration → Notifications**
+
+5. Complete the installation process
+
+6. Optionally score the quizzes that existed before the installation: **Site administration → Plugins → Local plugins → Quiz Metadata Monitor → Backfill existing quizzes**
 
 ---
 
@@ -190,7 +197,7 @@ The plugin implements the Moodle Privacy API. It stores which user created, edit
     - Database layer for scores, history, templates and settings
     - Moodle email API (`email_to_user`) for notifications
     - Privacy API for exporting and deleting user data
-- Reads the settings of the Safe Exam Browser and Block concurrent sessions quiz access rules when they are installed
+- Reads the settings of the Safe Exam Browser and Block concurrent sessions quiz access rules
 - Designed to be fully upgrade-safe, with no modifications to Moodle core code
 
 ---
@@ -206,7 +213,6 @@ All generated code was reviewed, validated, and adapted to comply with Moodle de
 ## Limitations
 
 - Scores quiz settings only, not the questions
-- The block concurrent connections criterion needs the `quizaccess_onesession` quiz access rule; without it, that criterion is scored as not met
 - Quizzes created before the installation are not rescored nightly unless they are backfilled or edited
 - A restored quiz is scored but no email is sent when the user who restores it is not a teacher in the course
 - The default email templates are in English; they can be edited under **Email templates**
