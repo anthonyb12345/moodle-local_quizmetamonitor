@@ -1,4 +1,19 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
 namespace local_quizmetamonitor\output;
 
 defined('MOODLE_INTERNAL') || die();
@@ -7,19 +22,29 @@ require_once($CFG->libdir . '/tablelib.php');
 
 /**
  * Flexible table for quiz score lists — shared by admin, monitor, and teacher views.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quiz_table extends \table_sql {
-
     /** @var bool Whether to show the category column */
     private bool $showcategory;
 
     /** @var bool Whether to show the course column */
     private bool $showcourse;
 
+    /**
+     * Set up the table columns and headers.
+     *
+     * @param string $uniqueid Unique id of the table.
+     * @param bool $showcategory Whether to show the category column.
+     * @param bool $showcourse Whether to show the course column.
+     */
     public function __construct(
         string $uniqueid,
         bool $showcategory = true,
-        bool $showcourse   = true
+        bool $showcourse = true
     ) {
         parent::__construct($uniqueid);
 
@@ -45,12 +70,12 @@ class quiz_table extends \table_sql {
             'is_below_threshold', 'actions',
         ]);
         $headers = array_merge($headers, [
-            get_string('opendate',      'local_quizmetamonitor'),
-            get_string('closedate',     'local_quizmetamonitor'),
-            get_string('score',         'local_quizmetamonitor'),
-            get_string('threshold',     'local_quizmetamonitor'),
-            get_string('status',        'local_quizmetamonitor'),
-            get_string('actions',       'local_quizmetamonitor'),
+            get_string('opendate', 'local_quizmetamonitor'),
+            get_string('closedate', 'local_quizmetamonitor'),
+            get_string('score', 'local_quizmetamonitor'),
+            get_string('threshold', 'local_quizmetamonitor'),
+            get_string('status', 'local_quizmetamonitor'),
+            get_string('actions', 'local_quizmetamonitor'),
         ]);
 
         $this->define_columns($columns);
@@ -63,8 +88,14 @@ class quiz_table extends \table_sql {
         $this->set_attribute('class', 'generaltable quizmetamonitor-table');
     }
 
-    // ---- Column renderers ------------------------------------------- //
+    // Column renderers.
 
+    /**
+     * Render the quizname column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_quizname(\stdClass $row): string {
         $detailurl = new \moodle_url(
             '/local/quizmetamonitor/pages/quiz_detail.php',
@@ -73,30 +104,72 @@ class quiz_table extends \table_sql {
         return \html_writer::link($detailurl, format_string($row->quizname));
     }
 
+    /**
+     * Render the coursename column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_coursename(\stdClass $row): string {
         return format_string($row->coursename ?? '');
     }
 
+    /**
+     * Render the categoryname column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_categoryname(\stdClass $row): string {
         return format_string($row->categoryname ?? '');
     }
 
+    /**
+     * Render the timeopen column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_timeopen(\stdClass $row): string {
         return !empty($row->timeopen) ? userdate($row->timeopen) : '—';
     }
 
+    /**
+     * Render the timeclose column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_timeclose(\stdClass $row): string {
         return !empty($row->timeclose) ? userdate($row->timeclose) : '—';
     }
 
+    /**
+     * Render the score_percent column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_score_percent(\stdClass $row): string {
         return round($row->score_percent, 1) . '%';
     }
 
+    /**
+     * Render the threshold_applied column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_threshold_applied(\stdClass $row): string {
         return round($row->threshold_applied, 1) . '%';
     }
 
+    /**
+     * Render the is_below_threshold column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_is_below_threshold(\stdClass $row): string {
         if ($row->is_below_threshold) {
             return \html_writer::tag(
@@ -112,6 +185,12 @@ class quiz_table extends \table_sql {
         );
     }
 
+    /**
+     * Render the actions column.
+     *
+     * @param \stdClass $row Table row.
+     * @return string
+     */
     public function col_actions(\stdClass $row): string {
         $detailurl = new \moodle_url(
             '/local/quizmetamonitor/pages/quiz_detail.php',

@@ -1,0 +1,2 @@
+# Moodle requires LF line endings; keep them regardless of local git settings.
+* text=auto eol=lf

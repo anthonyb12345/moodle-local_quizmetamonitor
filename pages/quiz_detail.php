@@ -1,4 +1,27 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Security score details and history for one quiz.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 require_once(__DIR__ . '/../../../config.php');
 
 require_login();
@@ -7,12 +30,12 @@ global $DB, $USER;
 
 $quizid = required_param('quizid', PARAM_INT);
 
-$scorerecord = $DB->get_record('local_quizmeta_quiz_score', ['quizid' => $quizid], '*', MUST_EXIST);
-$quiz        = $DB->get_record('quiz',   ['id' => $quizid],               '*', MUST_EXIST);
+$scorerecord = $DB->get_record('local_quizmetamonitor_quiz_score', ['quizid' => $quizid], '*', MUST_EXIST);
+$quiz        = $DB->get_record('quiz', ['id' => $quizid], '*', MUST_EXIST);
 $course      = $DB->get_record('course', ['id' => $scorerecord->courseid], '*', MUST_EXIST);
 $cm          = get_coursemodule_from_instance('quiz', $quizid, $course->id, false, MUST_EXIST);
 
-// ---- Permission check --------------------------------------------- //
+// Permission check.
 $sysctx = context_system::instance();
 $catctx = context_coursecat::instance($scorerecord->categoryid);
 $coursectx = context_course::instance($course->id);
@@ -24,7 +47,7 @@ $allowed =
     || has_capability('local/quizmetamonitor:viewown', $coursectx);
 
 if (!$allowed) {
-    throw new moodle_exception('nopermissions', 'error', '', 'view this quiz detail');
+    throw new moodle_exception('nopermissions', 'error', '', get_string('viewquizdetail', 'local_quizmetamonitor'));
 }
 
 $PAGE->set_url('/local/quizmetamonitor/pages/quiz_detail.php', ['quizid' => $quizid]);
@@ -36,22 +59,22 @@ $PAGE->set_pagelayout('standard');
 echo $OUTPUT->header();
 echo $OUTPUT->heading(get_string('quizdetail', 'local_quizmetamonitor') . ': ' . format_string($quiz->name));
 
-// ---- Summary card -------------------------------------------------- //
+// Summary card.
 $isbelow  = (bool) $scorerecord->is_below_threshold;
 $badgeclass = $isbelow ? 'badge-danger' : 'badge-success';
 $badgetext  = $isbelow
     ? get_string('belowthreshold', 'local_quizmetamonitor')
-    : get_string('ok',             'local_quizmetamonitor');
+    : get_string('ok', 'local_quizmetamonitor');
 
 echo html_writer::start_div('card mb-4');
 echo html_writer::start_div('card-body');
 
 $summarydata = [
     get_string('course')                              => format_string($course->fullname),
-    get_string('score',     'local_quizmetamonitor')  => '<strong>' . $scorerecord->score_percent . '%</strong>',
+    get_string('score', 'local_quizmetamonitor')  => '<strong>' . $scorerecord->score_percent . '%</strong>',
     get_string('threshold', 'local_quizmetamonitor')  => $scorerecord->threshold_applied . '%',
-    get_string('status',    'local_quizmetamonitor')  => html_writer::tag('span', $badgetext, ['class' => 'badge ' . $badgeclass]),
-    get_string('opendate',  'local_quizmetamonitor')  => $quiz->timeopen  ? userdate($quiz->timeopen)  : '—',
+    get_string('status', 'local_quizmetamonitor')  => html_writer::tag('span', $badgetext, ['class' => 'badge ' . $badgeclass]),
+    get_string('opendate', 'local_quizmetamonitor')  => $quiz->timeopen ? userdate($quiz->timeopen) : '—',
     get_string('closedate', 'local_quizmetamonitor')  => $quiz->timeclose ? userdate($quiz->timeclose) : '—',
 ];
 
@@ -65,39 +88,45 @@ echo html_writer::tag('dl', $dl, ['class' => 'row']);
 echo html_writer::end_div();
 echo html_writer::end_div();
 
-// ---- Criteria breakdown table ------------------------------------- //
+// Criteria breakdown table.
 $breakdown = json_decode($scorerecord->criteria_snapshot, true) ?? [];
 
 echo $OUTPUT->heading(get_string('criteriabreakdown', 'local_quizmetamonitor'), 3);
 
 $table = new html_table();
 $table->head = [
-    get_string('criterion',      'local_quizmetamonitor'),
+    get_string('criterion', 'local_quizmetamonitor'),
     get_string('pointspossible', 'local_quizmetamonitor'),
-    get_string('pointsearned',   'local_quizmetamonitor'),
-    get_string('status',         'local_quizmetamonitor'),
+    get_string('pointsearned', 'local_quizmetamonitor'),
+    get_string('status', 'local_quizmetamonitor'),
 ];
 $table->attributes['class'] = 'generaltable';
 
 foreach ($breakdown as $item) {
     $met = (bool) $item['met'];
     $table->data[] = [
-        $item['label'],
+        \local_quizmetamonitor\scoring_engine::display_label($item),
         $item['points_possible'],
         $item['points_earned'],
         $met
-            ? html_writer::tag('span', get_string('pass', 'local_quizmetamonitor'),
-                ['class' => 'badge badge-success'])
-            : html_writer::tag('span', get_string('fail', 'local_quizmetamonitor'),
-                ['class' => 'badge badge-danger']),
+            ? html_writer::tag(
+                'span',
+                get_string('pass', 'local_quizmetamonitor'),
+                ['class' => 'badge badge-success']
+            )
+            : html_writer::tag(
+                'span',
+                get_string('fail', 'local_quizmetamonitor'),
+                ['class' => 'badge badge-danger']
+            ),
     ];
 }
 
 echo html_writer::table($table);
 
-// ---- Score history ------------------------------------------------- //
+// Score history.
 $history = $DB->get_records(
-    'local_quizmeta_score_history',
+    'local_quizmetamonitor_score_history',
     ['quizid' => $quizid],
     'timecreated DESC',
     '*',
@@ -110,9 +139,9 @@ if (!empty($history)) {
 
     $htable = new html_table();
     $htable->head = [
-        get_string('score',       'local_quizmetamonitor'),
-        get_string('threshold',   'local_quizmetamonitor'),
-        get_string('changedby',   'local_quizmetamonitor'),
+        get_string('score', 'local_quizmetamonitor'),
+        get_string('threshold', 'local_quizmetamonitor'),
+        get_string('changedby', 'local_quizmetamonitor'),
         get_string('date'),
     ];
     $htable->attributes['class'] = 'generaltable';
@@ -133,9 +162,7 @@ if (!empty($history)) {
     echo html_writer::table($htable);
 }
 
-// -------------------------------------------------------------------- //
-// Actions                                                               //
-// -------------------------------------------------------------------- //
+// Actions.
 
 // View quiz URL.
 $viewurl = new moodle_url('/mod/quiz/view.php', ['id' => $cm->id]);
@@ -152,8 +179,10 @@ $backurl = null;
 if (has_capability('local/quizmetamonitor:viewall', context_system::instance())) {
     $backurl = new moodle_url('/local/quizmetamonitor/pages/admin_overview.php');
 } else if (has_capability('local/quizmetamonitor:viewown', context_course::instance($course->id))) {
-    $backurl = new moodle_url('/local/quizmetamonitor/pages/teacher_quizzes.php',
-        ['courseid' => $course->id]);
+    $backurl = new moodle_url(
+        '/local/quizmetamonitor/pages/teacher_quizzes.php',
+        ['courseid' => $course->id]
+    );
 }
 
 echo html_writer::start_div('mt-4 d-flex flex-wrap gap-2');

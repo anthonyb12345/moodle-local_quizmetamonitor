@@ -1,6 +1,34 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Install steps for local_quizmetamonitor.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/upgradelib.php');
+
+/**
+ * Seed the default threshold, scoring criteria and email templates on install.
+ */
 function xmldb_local_quizmetamonitor_install(): void {
     global $DB;
 
@@ -9,11 +37,9 @@ function xmldb_local_quizmetamonitor_install(): void {
     // Quizzes created before this point are not resynced nightly.
     set_config('trackfrom', $now, 'local_quizmetamonitor');
 
-    // ------------------------------------------------------------------ //
-    // 1. Seed default threshold (70 %).                                   //
-    // ------------------------------------------------------------------ //
-    if (!$DB->record_exists('local_quizmeta_threshold', ['categoryid' => null])) {
-        $DB->insert_record('local_quizmeta_threshold', (object)[
+    // 1. Seed default threshold (70 %).
+    if (!$DB->record_exists('local_quizmetamonitor_threshold', ['categoryid' => null])) {
+        $DB->insert_record('local_quizmetamonitor_threshold', (object)[
             'categoryid'        => null,
             'threshold_percent' => 70.00,
             'timecreated'       => $now,
@@ -21,22 +47,20 @@ function xmldb_local_quizmetamonitor_install(): void {
         ]);
     }
 
-    // ------------------------------------------------------------------ //
-    // 2. Seed default scoring criteria.                                   //
-    // ------------------------------------------------------------------ //
+    // 2. Seed default scoring criteria.
     $criteria = [
-        ['open_date_set',        'Open date set',                    1],
-        ['close_date_set',       'Close date set',                   1],
-        ['allowed_attempts_set', 'Allowed attempts limited',         1],
-        ['password_set',         'Password set',                     1],
-        ['ip_restriction_set',   'Restriction by IP address set',    1],
+        ['open_date_set', 'Open date set', 1],
+        ['close_date_set', 'Close date set', 1],
+        ['allowed_attempts_set', 'Allowed attempts limited', 1],
+        ['password_set', 'Password set', 1],
+        ['ip_restriction_set', 'Restriction by IP address set', 1],
         ['block_concurrent_set', 'Block Concurrent Connections set', 1],
-        ['seb_enabled',          'Safe Exam Browser enabled',        1],
+        ['seb_enabled', 'Safe Exam Browser enabled', 1],
     ];
 
     foreach ($criteria as $i => [$key, $label, $points]) {
-        if (!$DB->record_exists('local_quizmeta_crit_default', ['criterion_key' => $key])) {
-            $DB->insert_record('local_quizmeta_crit_default', (object)[
+        if (!$DB->record_exists('local_quizmetamonitor_crit_default', ['criterion_key' => $key])) {
+            $DB->insert_record('local_quizmetamonitor_crit_default', (object)[
                 'criterion_key'   => $key,
                 'criterion_label' => $label,
                 'points'          => $points,
@@ -48,9 +72,7 @@ function xmldb_local_quizmetamonitor_install(): void {
         }
     }
 
-    // ------------------------------------------------------------------ //
-    // 3. Seed default email templates.                                    //
-    // ------------------------------------------------------------------ //
+    // 3. Seed default email templates.
     $templates = [
         [
             'key'   => 'teacher_created',
@@ -61,17 +83,16 @@ function xmldb_local_quizmetamonitor_install(): void {
 <h3>Criteria breakdown:</h3>
 {criteria_breakdown}
 <p>Please review the quiz settings to ensure compliance.</p>',
-            'plain' => "Hello,\n\nA new quiz \"{quiz_name}\" has been created in the course \"{course_name}\".\n\nSecurity score: {score_percent}% (threshold: {threshold_percent}%)\n\nCriteria breakdown:\n{criteria_breakdown}\n\nPlease review the quiz settings to ensure compliance.",
+            'plain' => "Hello,\n\nA new quiz \"{quiz_name}\" has been created in the course \"{course_name}\".\n\n"
+                . "Security score: {score_percent}% (threshold: {threshold_percent}%)\n\n"
+                . "Criteria breakdown:\n{criteria_breakdown}\n\n"
+                . "Please review the quiz settings to ensure compliance.",
         ],
         [
             'key'   => 'teacher_score_changed',
-            'subj'  => 'Quiz security score changed: {quiz_name}',
-            'html'  => '<p>Hello,</p>
-<p>The quiz <strong>{quiz_name}</strong> in <strong>{course_name}</strong> was recently edited.</p>
-<p>Previous score: {previous_score}% &rarr; New score: <strong>{score_percent}%</strong> (threshold: {threshold_percent}%)</p>
-<h3>Criteria breakdown:</h3>
-{criteria_breakdown}',
-            'plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in \"{course_name}\" was recently edited.\n\nPrevious score: {previous_score}% -> New score: {score_percent}% (threshold: {threshold_percent}%)\n\nCriteria breakdown:\n{criteria_breakdown}",
+            'subj'  => local_quizmetamonitor_default_settings_changed_template()['subject'],
+            'html'  => local_quizmetamonitor_default_settings_changed_template()['body_html'],
+            'plain' => local_quizmetamonitor_default_settings_changed_template()['body_plain'],
         ],
         [
             'key'   => 'exammonitor_below_threshold',
@@ -84,13 +105,17 @@ security score is below the required threshold.</p>
 <h3>Criteria breakdown:</h3>
 {criteria_breakdown}
 <p>Please contact the course teacher to resolve this before the quiz opens.</p>',
-            'plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in course \"{course_name}\" (category: {category_name}) is starting within 24 hours and its security score is below the required threshold.\n\nScore: {score_percent}% | Threshold: {threshold_percent}%\n\nCriteria breakdown:\n{criteria_breakdown}\n\nPlease contact the course teacher to resolve this before the quiz opens.",
+            'plain' => "Hello,\n\nThe quiz \"{quiz_name}\" in course \"{course_name}\" (category: {category_name}) "
+                . "is starting within 24 hours and its security score is below the required threshold.\n\n"
+                . "Score: {score_percent}% | Threshold: {threshold_percent}%\n\n"
+                . "Criteria breakdown:\n{criteria_breakdown}\n\n"
+                . "Please contact the course teacher to resolve this before the quiz opens.",
         ],
     ];
 
     foreach ($templates as $t) {
-        if (!$DB->record_exists('local_quizmeta_email_tmpl', ['template_key' => $t['key']])) {
-            $DB->insert_record('local_quizmeta_email_tmpl', (object)[
+        if (!$DB->record_exists('local_quizmetamonitor_email_tmpl', ['template_key' => $t['key']])) {
+            $DB->insert_record('local_quizmetamonitor_email_tmpl', (object)[
                 'template_key' => $t['key'],
                 'subject'      => $t['subj'],
                 'body_html'    => $t['html'],
@@ -100,4 +125,10 @@ security score is below the required threshold.</p>
             ]);
         }
     }
+
+    // Email for quizzes restored/imported into a course.
+    local_quizmetamonitor_add_restored_template();
+
+    // Below-threshold alert to the users who created/edited the quiz.
+    local_quizmetamonitor_add_teacher_alert_template();
 }

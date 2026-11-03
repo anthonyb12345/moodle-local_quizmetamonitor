@@ -1,20 +1,36 @@
 <?php
-namespace local_quizmetamonitor;
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
-defined('MOODLE_INTERNAL') || die();
+namespace local_quizmetamonitor;
 
 /**
  * Resolves criteria + threshold and computes the security score for a quiz.
+ *
+ * @package    local_quizmetamonitor
+ * @copyright  2026 Center for Digital Innovation and Artificial Intelligence <moodle.cinia@usj.edu.lb>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class scoring_engine {
-
-    // ------------------------------------------------------------------ //
-    // Public API                                                          //
-    // ------------------------------------------------------------------ //
+    // Public API.
 
     /**
      * Canonical list of criterion keys → default human-readable labels.
      * The order here drives the default sortorder on install.
+     *
+     * @return array
      */
     public static function get_available_criteria(): array {
         return [
@@ -33,12 +49,15 @@ class scoring_engine {
      * if no category-level override rows exist.
      *
      * Returns: [ criterion_key => ['label'=>…, 'points'=>…, 'enabled'=>…] ]
+     *
+     * @param int $categoryid Course category ID.
+     * @return array
      */
     public static function resolve_criteria(int $categoryid): array {
         global $DB;
 
         $catrows = $DB->get_records(
-            'local_quizmeta_crit_category',
+            'local_quizmetamonitor_crit_category',
             ['categoryid' => $categoryid],
             'sortorder ASC'
         );
@@ -47,23 +66,26 @@ class scoring_engine {
             return self::rows_to_map($catrows);
         }
 
-        $defrows = $DB->get_records('local_quizmeta_crit_default', [], 'sortorder ASC');
+        $defrows = $DB->get_records('local_quizmetamonitor_crit_default', [], 'sortorder ASC');
         return self::rows_to_map($defrows);
     }
 
     /**
      * Resolve the threshold for a category, falling back to the site default
      * (the row where categoryid IS NULL) if no category override exists.
+     *
+     * @param int $categoryid Course category ID.
+     * @return float
      */
     public static function resolve_threshold(int $categoryid): float {
         global $DB;
 
-        $override = $DB->get_record('local_quizmeta_threshold', ['categoryid' => $categoryid]);
+        $override = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => $categoryid]);
         if ($override) {
             return (float) $override->threshold_percent;
         }
 
-        $default = $DB->get_record('local_quizmeta_threshold', ['categoryid' => null]);
+        $default = $DB->get_record('local_quizmetamonitor_threshold', ['categoryid' => null]);
         if ($default) {
             return (float) $default->threshold_percent;
         }
@@ -74,6 +96,7 @@ class scoring_engine {
     /**
      * Compute the full security score for a quiz.
      *
+     * @param int $quizid Quiz ID.
      * @return array{
      *   quizid: int, courseid: int, categoryid: int,
      *   score_percent: float, threshold_applied: float,
@@ -103,19 +126,33 @@ class scoring_engine {
 
             $possible = (float) $def['points'];
             $totalpoints += $possible;
-            $met = self::evaluate_criterion($key, $quiz, $accessdata);
+            $met   = self::evaluate_criterion($key, $quiz, $accessdata);
+            $label = $def['label'];
+
+            // SEB "No" is a legitimate choice (open book / software allowed), so it is never
+            // penalised: always full points, and the label shows which option was picked.
+            $choice = null;
+            if ($key === 'seb_enabled') {
+                $choice = self::seb_choice((int) $accessdata['sebmode']);
+                $label  = get_string('seb_choice_' . $choice, 'local_quizmetamonitor');
+                $met    = true;
+            }
 
             if ($met) {
                 $earnedpoints += $possible;
             }
 
-            $breakdown[] = [
+            $item = [
                 'key'             => $key,
-                'label'           => $def['label'],
+                'label'           => $label,
                 'points_possible' => $possible,
                 'points_earned'   => $met ? $possible : 0.0,
                 'met'             => $met,
             ];
+            if ($choice !== null) {
+                $item['choice'] = $choice;
+            }
+            $breakdown[] = $item;
         }
 
         $scorepercent = $totalpoints > 0
@@ -135,14 +172,78 @@ class scoring_engine {
     }
 
     /**
-     * Persist the score to local_quizmeta_quiz_score and always append a
-     * history row.  Returns [bool $changed, ?float $previousScore].
+     * Map quizaccess_seb's requiresafeexambrowser value to the stored choice key
+     * (settings_provider::USE_SEB_* constants; ints used so this works without the rule installed).
+     *
+     * @param int $mode The quizaccess_seb requiresafeexambrowser value.
+     * @return string
+     */
+    private static function seb_choice(int $mode): string {
+        switch ($mode) {
+            case 0:
+                return 'no';       // USE_SEB_NO.
+            case 1:
+                return 'manual';   // USE_SEB_CONFIG_MANUALLY.
+            case 2:
+                return 'template'; // USE_SEB_TEMPLATE.
+            case 3:
+                return 'upload';   // USE_SEB_UPLOAD_CONFIG.
+            case 4:
+                return 'client';   // USE_SEB_CLIENT_CONFIG.
+            default:
+                return 'yes';      // Any other "yes" variant.
+        }
+    }
+
+    /**
+     * Label to show for a breakdown item, in the current language.
+     *
+     * Choice-based criteria (SEB) are resolved at display time from their stored
+     * choice, so each reader sees their own language; other criteria use the
+     * admin-configured label stored with the score.
+     *
+     * @param array $item Criteria breakdown item.
+     * @return string
+     */
+    public static function display_label(array $item): string {
+        if (isset($item['choice']) && $item['key'] === 'seb_enabled') {
+            return get_string('seb_choice_' . $item['choice'], 'local_quizmetamonitor');
+        }
+        return $item['label'];
+    }
+
+    /**
+     * What a teacher can change per criterion: whether it is met and, for choice-based
+     * criteria, which option was picked. Labels are ignored (they depend on language).
+     *
+     * @param array $breakdown Criteria breakdown.
+     * @return array
+     */
+    private static function criteria_outcomes(array $breakdown): array {
+        $outcomes = [];
+        foreach ($breakdown as $item) {
+            $outcomes[$item['key']] = [(bool) $item['met'], $item['choice'] ?? null];
+        }
+        ksort($outcomes);
+        return $outcomes;
+    }
+
+    /**
+     * Persist the score to local_quizmetamonitor_quiz_score and always append a
+     * history row.  Returns [bool $changed, ?float $previousScore, array $previousBreakdown].
+     *
+     * $changed is true when the score OR any criterion outcome/choice changed
+     * (e.g. SEB Yes -> No changes no points but is still a security setting change).
+     *
+     * @param array $result Result of compute_score().
+     * @param int $changedbyuserid ID of the user who made the change (0 = system).
+     * @return array
      */
     public static function save_score(array $result, int $changedbyuserid): array {
         global $DB;
 
         $now      = time();
-        $existing = $DB->get_record('local_quizmeta_quiz_score', ['quizid' => $result['quizid']]);
+        $existing = $DB->get_record('local_quizmetamonitor_quiz_score', ['quizid' => $result['quizid']]);
         $snapshot = json_encode($result['breakdown']);
 
         $record                    = new \stdClass();
@@ -157,16 +258,19 @@ class scoring_engine {
 
         $changed       = false;
         $previousscore = null;
+        $previous      = [];
 
         if ($existing) {
             $previousscore = (float) $existing->score_percent;
-            $changed       = abs($previousscore - $result['score_percent']) > 0.001;
+            $previous      = json_decode($existing->criteria_snapshot, true) ?? [];
+            $changed       = abs($previousscore - $result['score_percent']) > 0.001
+                || self::criteria_outcomes($previous) !== self::criteria_outcomes($result['breakdown']);
             $record->id          = $existing->id;
             $record->timecreated = $existing->timecreated;
-            $DB->update_record('local_quizmeta_quiz_score', $record);
+            $DB->update_record('local_quizmetamonitor_quiz_score', $record);
         } else {
             $record->timecreated = $now;
-            $DB->insert_record('local_quizmeta_quiz_score', $record);
+            $DB->insert_record('local_quizmetamonitor_quiz_score', $record);
             $changed = true; // First-time creation always counts as changed.
         }
 
@@ -178,15 +282,19 @@ class scoring_engine {
         $history->threshold_applied = $result['threshold_applied'];
         $history->changed_by_userid = $changedbyuserid;
         $history->timecreated       = $now;
-        $DB->insert_record('local_quizmeta_score_history', $history);
+        $DB->insert_record('local_quizmetamonitor_score_history', $history);
 
-        return [$changed, $previousscore];
+        return [$changed, $previousscore, $previous];
     }
 
-    // ------------------------------------------------------------------ //
-    // Private helpers                                                     //
-    // ------------------------------------------------------------------ //
+    // Private helpers.
 
+    /**
+     * Convert criteria records into the map returned by resolve_criteria().
+     *
+     * @param \stdClass[] $rows Criteria records.
+     * @return array
+     */
     private static function rows_to_map(array $rows): array {
         $map = [];
         foreach ($rows as $row) {
@@ -201,6 +309,11 @@ class scoring_engine {
 
     /**
      * Evaluate one criterion key against real quiz data.
+     *
+     * @param string $key Criterion key.
+     * @param \stdClass $quiz Quiz record.
+     * @param array $accessdata Access rule data from get_access_data().
+     * @return bool
      */
     private static function evaluate_criterion(
         string $key,
@@ -238,15 +351,19 @@ class scoring_engine {
     /**
      * Gather access-rule metadata for a quiz from the DB.
      * Adjusts gracefully if optional access-rule plugins are not installed.
+     *
+     * @param \stdClass $quiz Quiz record.
+     * @return array
      */
     private static function get_access_data(\stdClass $quiz): array {
         global $DB;
 
         $data = [
             'password'       => $quiz->password ?? '',
-            'subnet'         => $quiz->subnet   ?? '',
+            'subnet'         => $quiz->subnet ?? '',
             'blockconcurrent' => 0,
             'sebenabled'     => 0,
+            'sebmode'        => 0,
         ];
 
         // Safe Exam Browser — quizaccess_seb plugin.
@@ -254,6 +371,7 @@ class scoring_engine {
             $seb = $DB->get_record('quizaccess_seb_quizsettings', ['quizid' => $quiz->id]);
             if ($seb && isset($seb->requiresafeexambrowser) && (int) $seb->requiresafeexambrowser > 0) {
                 $data['sebenabled'] = 1;
+                $data['sebmode']    = (int) $seb->requiresafeexambrowser;
             }
         }
 
