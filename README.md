@@ -228,7 +228,7 @@ All generated code was reviewed, validated, and adapted to comply with Moodle de
 
 ## License
 
-GNU GPL v3 or later  
+GNU GPL v3 or later. See the [LICENSE](LICENSE) file for the full text.  
 https://www.gnu.org/copyleft/gpl.html
 
 ---
